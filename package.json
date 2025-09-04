@@ -1,0 +1,26 @@
+{
+  "name": "cloudcom-teamup",
+  "version": "1.0.0",
+  "description": "Cloudcom TeamUp",
+  "private": true,
+  "workspaces": [
+      "teamup_back",
+      "teamup_front"
+    ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start -w teamup_back",
+    "dev:frontend": "npm run dev -w teamup_front"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  },
+  "keywords": [
+    "teamup",
+    "cognito",
+    "nextjs",
+    "express"
+  ],
+  "author": "Cloudcom Team",
+  "license": "MIT"
+}
