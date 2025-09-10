@@ -4,9 +4,9 @@
   "description": "Cloudcom TeamUp",
   "private": true,
   "workspaces": [
-      "teamup_back",
-      "teamup_front"
-    ],
+    "teamup_back",
+    "teamup_front"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run start -w teamup_back",

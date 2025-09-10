@@ -1,6 +1,7 @@
 {
   "name": "cloudcom_teamup",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -14,7 +15,9 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
+    "net": "^1.0.2",
     "openid-client": "^5.6.5",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "ssh2": "^1.17.0"
   }
 }
