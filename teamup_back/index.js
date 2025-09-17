@@ -141,27 +141,24 @@ const checkAuth = (req, res, next) => {
   next();
 };
 
-app.get("/callback", async (req, res) => {
-  try {
-    const params = client.callbackParams(req);
-    const tokenSet = await client.callback(
-      "http://localhost:3100/callback",
-      params,
-      {
-        nonce: req.session.nonce,
-        state: req.session.state,
-      }
-    );
+app.get("/callback", async (req,res)=>{
+  const params = client.callbackParams(req);
+  const tokenSet = await client.callback("http://localhost:3100/callback",params,{
+    nonce:req.session.nonce,
+    state:req.session.state
+  });
+  const userInfo = await client.userinfo(tokenSet.access_token);
 
-    const userInfo = await client.userinfo(tokenSet.access_token);
+  req.session.regenerate(err=>{
+    if(err){ console.error(err); return res.redirect("http://localhost:3000"); }
     req.session.userInfo = userInfo;
-
-    res.redirect("http://localhost:3000");
-  } catch (err) {
-    console.error("Callback error:", err);
-    res.redirect("http://localhost:3000");
-  }
+    req.session.save(()=>{
+      res.redirect("http://localhost:3000");
+    });
+  });
 });
+
+
 
 app.get("/", checkAuth, (req, res) => {
   res.redirect("http://localhost:3000");
@@ -174,6 +171,23 @@ app.get("/createActivity", checkAuth, (req, res) => {
   // redirect ไปที่ frontend page
   res.redirect("http://localhost:3000/createActivity");
 });
+
+app.get("/eventSchedule", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect('/login');
+  }
+  // redirect ไปที่ frontend page
+  res.redirect("http://localhost:3000/eventSchedule");
+});
+
+app.get("/eventDetail/:id", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect('/login');
+  }
+  // redirect ไปหน้า frontend ที่แสดงรายละเอียดกิจกรรม
+  res.redirect(`http://localhost:3000/eventDetail/${req.params.id}`);
+});
+
 
 app.get("/login", (req, res) => {
   const cognitoDomain =
@@ -243,6 +257,7 @@ app.post("/api/createActivity", async (req, res) => {
       });
     }
 
+    // ✅ 1. สร้าง activity
     const query = `
       INSERT INTO activity 
       (name, owner, category, startDate, endDate, signUpDeadline, description, location)
@@ -262,7 +277,18 @@ app.post("/api/createActivity", async (req, res) => {
     ];
 
     const result = await pool.query(query, values);
-    res.status(201).json(result.rows[0]);
+    const newActivity = result.rows[0];
+
+    // ✅ 2. insert owner ไปที่ activity_participant
+    await pool.query(
+      `
+      INSERT INTO activity_participant (activity_id, user_id, status, role)
+      VALUES ($1, $2, 'joined', 'organizer')
+      `,
+      [newActivity.id, owner] // ใช้ owner id เป็น user_id
+    );
+
+    res.status(201).json(newActivity);
   } catch (err) {
     console.error('Error creating activity:', err);
     res.status(500).json({
@@ -270,6 +296,98 @@ app.post("/api/createActivity", async (req, res) => {
     });
   }
 });
+
+
+app.get("/api/eventSchedule", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, owner, category, startDate, endDate, description, location 
+      FROM activity
+      ORDER BY startDate ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching activities:", err);
+    res.status(500).json({ error: "Failed to fetch activities" });
+  }
+});
+
+app.get("/api/eventDetail/:id", async (req, res) => {
+  const eventId = req.params.id;
+  try {
+    const result = await pool.query(
+      `
+      SELECT id, name, owner, category, startDate, endDate, description, location
+      FROM activity
+      WHERE id = $1
+      `,
+      [eventId] // ค่า eventId จะถูก bind เข้ามาที่ $1
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    res.json(result.rows[0]); // ส่ง object ของกิจกรรมเดียว
+  } catch (err) {
+    console.error("Error fetching activity:", err);
+    res.status(500).json({ error: "Failed to fetch activity" });
+  }
+});
+
+// ✅ ผู้ใช้เข้าร่วมกิจกรรม
+app.post("/api/eventDetail/:id/join", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const activityId = req.params.id;
+  const userId = req.session.userInfo.sub; // Cognito user id
+
+  try {
+    const query = `
+      INSERT INTO activity_participant (activity_id, user_id, status, role)
+      VALUES ($1, $2, 'pending', 'participant')
+      ON CONFLICT (activity_id, user_id) DO NOTHING
+      RETURNING *;
+    `;
+    const values = [activityId, userId];
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(200).json({ message: "Already joined or pending" });
+    }
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error joining activity:", err);
+    res.status(500).json({ error: "Failed to join activity" });
+  }
+});
+
+app.get("/api/eventDetail/:id/checkParticipant", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.json({ joined: false });
+  }
+
+  const activityId = req.params.id;
+  const userId = req.session.userInfo.sub;
+
+  try {
+    const result = await pool.query(
+      "SELECT 1 FROM activity_participant WHERE activity_id = $1 AND user_id = $2",
+      [activityId, userId]
+    );
+
+    res.json({ joined: result.rows.length > 0 });
+  } catch (err) {
+    console.error("Error checking participant:", err);
+    res.status(500).json({ joined: false });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 3100;
 

@@ -1,0 +1,247 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  ArrowLeft,
+  FileText,
+  Tag,
+} from "lucide-react";
+
+const EventDetail = () => {
+  const params = useParams();
+  const router = useRouter();
+  const id = params?.id;
+
+  const [loading, setLoading] = useState(true);
+  const [eventData, setEventData] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  const [hasJoined, setHasJoined] = useState(false);
+
+  // ✅ ตรวจสอบ auth
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch("http://localhost:3100/api/auth/status", {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (!data.isAuthenticated) {
+        window.location.href = "http://localhost:3100/login";
+        return;
+      }
+      setUserInfo(data.userInfo);
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      window.location.href = "http://localhost:3100/login";
+    }
+  };
+
+  // ✅ ดึงข้อมูลกิจกรรม
+  const fetchEvent = async () => {
+    try {
+      const res = await fetch(`http://localhost:3100/api/eventDetail/${id}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Failed to fetch event");
+      const data = await res.json();
+      setEventData(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ ตรวจสอบว่าผู้ใช้เข้าร่วมแล้วหรือยัง
+  const checkJoined = async () => {
+    if (!id || !userInfo) return;
+    try {
+      const res = await fetch(
+        `http://localhost:3100/api/eventDetail/${id}/checkParticipant`,
+        { credentials: "include" }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setHasJoined(data.joined);
+    } catch (err) {
+      console.error("Check joined failed:", err);
+    }
+  };
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      fetchEvent();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id && userInfo) {
+      checkJoined();
+    }
+  }, [id, userInfo]);
+
+  // ✅ ฟังก์ชันกดเข้าร่วม
+  const handleJoin = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:3100/api/eventDetail/${id}/join`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        alert("เข้าร่วมกิจกรรมสำเร็จ!");
+        setHasJoined(true);
+      } else {
+        alert(data.error || "ไม่สามารถเข้าร่วมได้");
+      }
+    } catch (err) {
+      console.error("Join failed:", err);
+      alert("เกิดข้อผิดพลาด");
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "long",
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const goBack = () => {
+    router.push("/eventSchedule");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-xl">กำลังโหลด...</div>
+      </div>
+    );
+  }
+
+  if (!eventData) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-xl">ไม่พบข้อมูลกิจกรรม</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <div className="bg-gray-900 border-b border-gray-800">
+        <div className="max-w-6xl mx-auto p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              onClick={goBack}
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div className="flex items-center">
+              <Calendar className="w-8 h-8 text-yellow-400 mr-3" />
+              <h1 className="text-3xl font-bold">รายละเอียดกิจกรรม</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
+          <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 p-6">
+            <h2 className="text-4xl font-bold text-black mb-2">
+              {eventData.name}
+            </h2>
+            <div className="flex items-center text-black text-lg">
+              <Tag className="w-5 h-5 mr-2" />
+              <span>{eventData.category || "กิจกรรม"}</span>
+            </div>
+          </div>
+
+          {/* Date & Time */}
+          <div className="p-6 grid md:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
+                  <Clock className="w-5 h-5 mr-2" />
+                  วันที่
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center text-gray-300">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    <span>{formatDate(eventData.startdate)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
+                  <MapPin className="w-5 h-5 mr-2" />
+                  สถานที่
+                </h3>
+                <p className="text-gray-300 text-lg">{eventData.location}</p>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                รายละเอียด
+              </h3>
+              <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                {eventData.description || "ไม่มีรายละเอียดเพิ่มเติม"}
+              </div>
+            </div>
+          </div>
+
+          {/* ✅ ปุ่มเข้าร่วม */}
+          <div className="p-6 flex justify-end">
+            <button
+              onClick={handleJoin}
+              disabled={hasJoined}
+              className={`px-6 py-3 rounded-lg shadow font-bold transition-colors ${
+                hasJoined
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-yellow-500 text-black hover:bg-yellow-400"
+              }`}
+            >
+              {hasJoined ? "เข้าร่วมแล้ว" : "เข้าร่วมกิจกรรม"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EventDetail;
