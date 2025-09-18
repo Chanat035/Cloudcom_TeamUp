@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function CreateActivityPage() {
   const [formData, setFormData] = useState({
+    // ... (existing form fields)
     activityName: '',
     category: '',
     startDate: '',
@@ -13,6 +14,7 @@ export default function CreateActivityPage() {
     location: ''
   });
 
+  const [activityImage, setActivityImage] = useState(null); 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
@@ -29,7 +31,6 @@ export default function CreateActivityPage() {
     'อื่นๆ'
   ];
 
-  // ตรวจสอบ authentication status
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -42,7 +43,6 @@ export default function CreateActivityPage() {
       const data = await response.json();
       
       if (!data.isAuthenticated) {
-        // redirect ไป login หากยังไม่ได้ login
         window.location.href = 'http://localhost:3100/login';
         return;
       }
@@ -69,36 +69,20 @@ export default function CreateActivityPage() {
     }
   };
 
+  const handleFileChange = (e) => {
+    setActivityImage(e.target.files[0]);
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.activityName.trim()) {
-      newErrors.activityName = 'กรุณากรอกชื่อกิจกรรม';
-    }
-
-    if (!formData.category) {
-      newErrors.category = 'กรุณาเลือกหมวดหมู่';
-    }
-
-    if (!formData.startDate) {
-      newErrors.startDate = 'กรุณาเลือกวันที่เริ่มต้น';
-    }
-
-    if (!formData.endDate) {
-      newErrors.endDate = 'กรุณาเลือกวันที่สิ้นสุด';
-    }
-
-    if (!formData.signUpDeadline) {
-      newErrors.signUpDeadline = 'กรุณาเลือกวันที่ปิดรับสมัคร';
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'กรุณากรอกรายละเอียดกิจกรรม';
-    }
-
-    if (!formData.location.trim()) {
-      newErrors.location = 'กรุณากรอกสถานที่';
-    }
+    if (!formData.activityName.trim()) newErrors.activityName = 'กรุณากรอกชื่อกิจกรรม';
+    if (!formData.category) newErrors.category = 'กรุณาเลือกหมวดหมู่';
+    if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันที่เริ่มต้น';
+    if (!formData.endDate) newErrors.endDate = 'กรุณาเลือกวันที่สิ้นสุด';
+    if (!formData.signUpDeadline) newErrors.signUpDeadline = 'กรุณาเลือกวันที่ปิดรับสมัคร';
+    if (!formData.description.trim()) newErrors.description = 'กรุณากรอกรายละเอียดกิจกรรม';
+    if (!formData.location.trim()) newErrors.location = 'กรุณากรอกสถานที่';
 
     if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
       newErrors.endDate = 'วันสิ้นสุดต้องมาหลังวันเริ่มต้น';
@@ -119,47 +103,63 @@ export default function CreateActivityPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3100/api/createActivity', {
+      // ✅ ขั้นตอนที่ 1: สร้างกิจกรรมก่อน
+      const activityPayload = {
+        name: formData.activityName,
+        owner: userInfo?.sub || 'anonymous',
+        category: formData.category,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        signUpDeadline: formData.signUpDeadline,
+        description: formData.description,
+        location: formData.location
+      };
+
+      const createActivityResponse = await fetch('http://localhost:3100/api/createActivity', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.activityName,
-          owner: userInfo?.sub || 'anonymous',
-          category: formData.category,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          signUpDeadline: formData.signUpDeadline,
-          description: formData.description,
-          location: formData.location
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(activityPayload),
         credentials: 'include'
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        alert('สร้างกิจกรรมสำเร็จ! 🎉');
-        console.log('Created activity:', result);
-        
-        // Reset form
-        setFormData({
-          activityName: '',
-          category: '',
-          startDate: '',
-          endDate: '',
-          signUpDeadline: '',
-          description: '',
-          location: ''
-        });
-        
-        // อาจจะ redirect ไปหน้าอื่น เช่น หน้าแสดงกิจกรรมทั้งหมด
-        // window.location.href = '/activities';
-        
-      } else {
-        const errorData = await response.json();
+      if (!createActivityResponse.ok) {
+        const errorData = await createActivityResponse.json();
         throw new Error(errorData.error || 'Failed to create activity');
       }
+
+      const result = await createActivityResponse.json();
+      const activityId = result.id; // ดึง activityId ที่ได้มา
+
+      // ✅ ขั้นตอนที่ 2: อัปโหลดรูปภาพ ถ้ามี
+      if (activityImage) {
+        const imageFormData = new FormData();
+        imageFormData.append('activityImage', activityImage);
+
+        const uploadResponse = await fetch(`http://localhost:3100/api/uploadActivityImage/${activityId}`, {
+          method: 'POST',
+          body: imageFormData,
+          credentials: 'include'
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image.');
+        }
+      }
+
+      alert('สร้างกิจกรรมสำเร็จ! 🎉');
+      console.log('Created activity with ID:', activityId);
+      
+      setFormData({
+        activityName: '',
+        category: '',
+        startDate: '',
+        endDate: '',
+        signUpDeadline: '',
+        description: '',
+        location: ''
+      });
+      setActivityImage(null);
+      
     } catch (error) {
       console.error('Error:', error);
       alert('เกิดข้อผิดพลาดในการสร้างกิจกรรม: ' + error.message);
@@ -178,6 +178,7 @@ export default function CreateActivityPage() {
       description: '',
       location: ''
     });
+    setActivityImage(null);
     setErrors({});
   };
 
@@ -187,7 +188,6 @@ export default function CreateActivityPage() {
   return `${day}/${month}/${year}`;
 };
 
-  // แสดง loading หากยังไม่ได้ข้อมูล user
   if (!userInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex items-center justify-center">
@@ -248,6 +248,22 @@ export default function CreateActivityPage() {
                     <span className="mr-1">⚠️</span> {errors.activityName}
                   </p>
                 )}
+              </div>
+
+              {/* ... (existing fields) */}
+              
+              {/* New: Activity Image */}
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-3">
+                  รูปภาพกิจกรรม
+                </label>
+                <input
+                  type="file"
+                  name="activityImage"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black border-gray-200 focus:border-purple-400 bg-white`}
+                />
               </div>
 
               {/* Category and Location Row */}
@@ -394,7 +410,7 @@ export default function CreateActivityPage() {
                   </p>
                 )}
               </div>
-
+              
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-8">
                 <button

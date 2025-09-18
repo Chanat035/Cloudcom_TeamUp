@@ -1,3 +1,5 @@
+// page.jsx
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -20,8 +22,8 @@ const EventDetail = () => {
   const [eventData, setEventData] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
   const [hasJoined, setHasJoined] = useState(false);
+  const [activityImageUrl, setActivityImageUrl] = useState(null);
 
-  // ✅ ตรวจสอบ auth
   const checkAuthStatus = async () => {
     try {
       const response = await fetch("http://localhost:3100/api/auth/status", {
@@ -40,7 +42,6 @@ const EventDetail = () => {
     }
   };
 
-  // ✅ ดึงข้อมูลกิจกรรม
   const fetchEvent = async () => {
     try {
       const res = await fetch(`http://localhost:3100/api/eventDetail/${id}`, {
@@ -56,7 +57,16 @@ const EventDetail = () => {
     }
   };
 
-  // ✅ ตรวจสอบว่าผู้ใช้เข้าร่วมแล้วหรือยัง
+  const fetchActivityImage = async () => {
+    try {
+      const res = await fetch(`http://localhost:3100/api/getActivityImage/${id}`);
+      const data = await res.json();
+      setActivityImageUrl(data.imageUrl);
+    } catch (err) {
+      console.error("Failed to fetch activity image:", err);
+    }
+  };
+
   const checkJoined = async () => {
     if (!id || !userInfo) return;
     try {
@@ -79,6 +89,7 @@ const EventDetail = () => {
   useEffect(() => {
     if (id) {
       fetchEvent();
+      fetchActivityImage();
     }
   }, [id]);
 
@@ -88,7 +99,6 @@ const EventDetail = () => {
     }
   }, [id, userInfo]);
 
-  // ✅ ฟังก์ชันกดเข้าร่วม
   const handleJoin = async () => {
     try {
       const res = await fetch(
@@ -126,11 +136,18 @@ const EventDetail = () => {
   const formatTime = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleTimeString("th-TH", {
+    return date.toLocaleTimeString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     });
+  };
+
+  const isSignUpClosed = () => {
+    if (!eventData?.signupdeadline) return false;
+    const deadline = new Date(eventData.signupdeadline);
+    const now = new Date();
+    return now > deadline;
   };
 
   const goBack = () => {
@@ -173,6 +190,21 @@ const EventDetail = () => {
         </div>
       </div>
 
+      {/* ✅ Container รูปภาพกิจกรรม: ขนาด 520x520 พิกเซล พร้อมปรับรูปให้พอดี */}
+      <div className="max-w-6xl mx-auto px-6 py-4">
+        {activityImageUrl && (
+          <div
+            className="w-full h-[520px] overflow-hidden rounded-xl shadow-lg mx-auto bg-gray-800"
+          >
+            <img
+              src={activityImageUrl}
+              alt={eventData.name}
+              className="w-full h-full object-contain object-center"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Content */}
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
@@ -186,7 +218,6 @@ const EventDetail = () => {
             </div>
           </div>
 
-          {/* Date & Time */}
           <div className="p-6 grid md:grid-cols-2 gap-6">
             <div className="space-y-6">
               <div className="bg-gray-800 rounded-lg p-4">
@@ -202,7 +233,6 @@ const EventDetail = () => {
                 </div>
               </div>
 
-              {/* Location */}
               <div className="bg-gray-800 rounded-lg p-4">
                 <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
                   <MapPin className="w-5 h-5 mr-2" />
@@ -212,7 +242,6 @@ const EventDetail = () => {
               </div>
             </div>
 
-            {/* Description */}
             <div className="bg-gray-800 rounded-lg p-4">
               <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
@@ -224,18 +253,21 @@ const EventDetail = () => {
             </div>
           </div>
 
-          {/* ✅ ปุ่มเข้าร่วม */}
           <div className="p-6 flex justify-end">
             <button
               onClick={handleJoin}
-              disabled={hasJoined}
+              disabled={hasJoined || isSignUpClosed()}
               className={`px-6 py-3 rounded-lg shadow font-bold transition-colors ${
-                hasJoined
+                hasJoined || isSignUpClosed()
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
                   : "bg-yellow-500 text-black hover:bg-yellow-400"
               }`}
             >
-              {hasJoined ? "เข้าร่วมแล้ว" : "เข้าร่วมกิจกรรม"}
+              {hasJoined
+                ? "เข้าร่วมแล้ว"
+                : isSignUpClosed()
+                ? "หมดเขตรับสมัครแล้ว"
+                : "เข้าร่วมกิจกรรม"}
             </button>
           </div>
         </div>

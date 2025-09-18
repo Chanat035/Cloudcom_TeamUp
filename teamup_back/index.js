@@ -7,6 +7,8 @@ import session from "express-session";
 import { Issuer } from "openid-client";
 import { Client } from "ssh2";
 import net from "net";
+import multer from "multer";
+import { S3Client, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -158,7 +160,15 @@ app.get("/callback", async (req,res)=>{
   });
 });
 
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,           // เช่น ap-southeast-2
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.get("/", checkAuth, (req, res) => {
   res.redirect("http://localhost:3000");
@@ -188,6 +198,13 @@ app.get("/eventDetail/:id", checkAuth, (req, res) => {
   res.redirect(`http://localhost:3000/eventDetail/${req.params.id}`);
 });
 
+app.get("/profile", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect('/login');
+  }
+  // redirect ไปที่ profile page
+  res.redirect("http://localhost:3000/profile");
+});
 
 app.get("/login", (req, res) => {
   const cognitoDomain =
@@ -297,11 +314,10 @@ app.post("/api/createActivity", async (req, res) => {
   }
 });
 
-
 app.get("/api/eventSchedule", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, name, owner, category, startDate, endDate, description, location 
+      SELECT id, name, owner, category, startDate, endDate, signUpDeadline, description, location
       FROM activity
       ORDER BY startDate ASC
     `);
@@ -317,7 +333,7 @@ app.get("/api/eventDetail/:id", async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT id, name, owner, category, startDate, endDate, description, location
+      SELECT id, name, owner, category, startDate, endDate, signUpDeadline, description, location
       FROM activity
       WHERE id = $1
       `,
@@ -387,7 +403,145 @@ app.get("/api/eventDetail/:id/checkParticipant", checkAuth, async (req, res) => 
   }
 });
 
+// ✅ ดึงกิจกรรมที่ user เป็น organizer
+app.get("/api/myGroups", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
+  const userId = req.session.userInfo.sub; // ได้มาจาก Cognito
+  console.log("Fetching groups for user:", userId);
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT a.id, a.name, a.category, a.startDate, a.endDate, a.location
+      FROM activity a
+      JOIN activity_participant ap 
+        ON a.id = ap.activity_id
+      WHERE ap.user_id = $1 AND ap.role = 'organizer'
+      ORDER BY a.startDate ASC
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching my groups:", err);
+    res.status(500).json({ error: "Failed to fetch my groups" });
+  }
+});
+
+app.post("/api/uploadProfile", checkAuth, upload.single("profileImage"), async (req, res) => {
+  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const userId = req.session.userInfo.sub; // จาก Cognito
+    const file = req.file;
+    const key = `user/${userId}/${file.originalname}`;
+
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    }));
+
+    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    res.json({ imageUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+app.get("/api/getProfile", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+
+  const userId = req.session.userInfo.sub;
+
+  try {
+    // ดึง list object ของ user
+    const command = new ListObjectsV2Command({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Prefix: `user/${userId}/`,
+    });
+    const response = await s3.send(command);
+
+    if (!response.Contents || response.Contents.length === 0) {
+      return res.json({ imageUrl: null }); // ไม่มีรูป
+    }
+
+    // เลือก object ล่าสุด
+    const latestObject = response.Contents.sort(
+      (a, b) => new Date(b.LastModified) - new Date(a.LastModified)
+    )[0];
+
+    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${latestObject.Key}`;
+
+    res.json({ imageUrl });
+  } catch (err) {
+    console.error("Error fetching profile image:", err);
+    res.status(500).json({ error: "Failed to fetch profile image" });
+  }
+});
+
+app.post("/api/uploadActivityImage/:activityId", checkAuth, upload.single("activityImage"), async (req, res) => {
+  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+
+  const activityId = req.params.activityId; // รับ activityId จาก URL parameter
+
+  if (!activityId) {
+    return res.status(400).json({ error: "Missing activityId" });
+  }
+
+  try {
+    const file = req.file;
+    // ✅ แก้ไข Key ให้มี prefix เป็น 'activity/activityId/'
+    const key = `activity/${activityId}/${file.originalname}`; 
+
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    }));
+
+    // ไม่จำเป็นต้องตอบกลับ imageUrl
+    res.json({ message: "Upload successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+app.get("/api/getActivityImage/:id", async (req, res) => {
+  const activityId = req.params.id;
+  const defaultImageUrl = "https://teamupbucket035.s3.ap-southeast-2.amazonaws.com/activity/Default-Activity-Image/default-activity.jpg";
+
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Prefix: `activity/${activityId}/`, // ค้นหาตาม activityId
+    });
+    const response = await s3.send(command);
+
+    if (!response.Contents || response.Contents.length === 0) {
+      return res.json({ imageUrl: defaultImageUrl });
+    }
+
+    // เลือกรูปภาพล่าสุด หากมีหลายรูป
+    const latestObject = response.Contents.sort(
+      (a, b) => new Date(b.LastModified) - new Date(a.LastModified)
+    )[0];
+
+    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${latestObject.Key}`;
+    res.json({ imageUrl });
+
+  } catch (err) {
+    console.error("Error fetching activity image:", err);
+    res.status(500).json({ imageUrl: defaultImageUrl, error: "Failed to fetch activity image" });
+  }
+});
 
 const PORT = process.env.PORT || 3100;
 

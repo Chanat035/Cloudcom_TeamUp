@@ -23,18 +23,18 @@ const EventsCalendar = () => {
   const [authChecked, setAuthChecked] = useState(false);
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "มกราคม",
+    "กุมภาพันธ์",
+    "มีนาคม",
+    "เมษายน",
+    "พฤษภาคม",
+    "มิถุนายน",
+    "กรกฎาคม",
+    "สิงหาคม",
+    "กันยายน",
+    "ตุลาคม",
+    "พฤศจิกายน",
+    "ธันวาคม",
   ];
 
   useEffect(() => {
@@ -82,6 +82,7 @@ const EventsCalendar = () => {
             })}`,
             venue: event.location,
             description: event.description,
+            signupdeadline: event.signupdeadline,
           });
         });
 
@@ -132,24 +133,6 @@ const EventsCalendar = () => {
         setCurrentYear(currentYear + 1);
       } else {
         setCurrentMonth(currentMonth + 1);
-      }
-    }
-  };
-
-  const navigatePickerMonth = (direction) => {
-    if (direction === "prev") {
-      if (pickerMonth === 0) {
-        setPickerMonth(11);
-        setPickerYear(pickerYear - 1);
-      } else {
-        setPickerMonth(pickerMonth - 1);
-      }
-    } else {
-      if (pickerMonth === 11) {
-        setPickerMonth(0);
-        setPickerYear(pickerYear + 1);
-      } else {
-        setPickerMonth(pickerMonth + 1);
       }
     }
   };
@@ -214,37 +197,40 @@ const EventsCalendar = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = () => {
-  if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) return;
 
-  let found = null;
+    let found = null;
 
-  for (const year in eventsDatabase) {
-    for (const month in eventsDatabase[year]) {
-      for (const day in eventsDatabase[year][month]) {
-        const events = eventsDatabase[year][month][day];
-        for (const event of events) {
-          if (event.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-            found = { year: parseInt(year), month: parseInt(month), day: parseInt(day) };
-            break;
+    for (const year in eventsDatabase) {
+      for (const month in eventsDatabase[year]) {
+        for (const day in eventsDatabase[year][month]) {
+          const events = eventsDatabase[year][month][day];
+          for (const event of events) {
+            if (event.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+              found = {
+                year: parseInt(year),
+                month: parseInt(month),
+                day: parseInt(day),
+              };
+              break;
+            }
           }
+          if (found) break;
         }
         if (found) break;
       }
       if (found) break;
     }
-    if (found) break;
-  }
 
-  if (found) {
-    setCurrentYear(found.year);
-    setCurrentMonth(found.month);
-    setSelectedDate(found.day);
-    setShowModal(true);
-  } else {
-    alert("ไม่พบกิจกรรมที่ค้นหา");
-  }
-};
-
+    if (found) {
+      setCurrentYear(found.year);
+      setCurrentMonth(found.month);
+      setSelectedDate(found.day);
+      setShowModal(true);
+    } else {
+      alert("ไม่พบกิจกรรมที่ค้นหา");
+    }
+  };
 
   const renderDatePickerGrid = () => {
     const days = [];
@@ -303,7 +289,7 @@ const EventsCalendar = () => {
             <ChevronLeft />
           </button>
           <h2 className="text-2xl font-semibold">
-            {monthNames[currentMonth]} {currentYear}
+            {monthNames[currentMonth]} {currentYear + 543}
           </h2>
           <button
             onClick={() => navigateMonth("next")}
@@ -361,7 +347,7 @@ const EventsCalendar = () => {
           <div className="bg-gray-900 rounded-lg max-w-sm w-full p-4 text-white">
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold">
-                {monthNames[pickerMonth]} {pickerYear}
+                {monthNames[pickerMonth]} {pickerYear + 543}
               </h3>
             </div>
             <div className="flex justify-between items-center mt-2">
@@ -369,14 +355,14 @@ const EventsCalendar = () => {
                 onClick={() => setPickerYear(pickerYear - 1)}
                 className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
               >
-                Prev Year
+                ปีก่อน
               </button>
-              <span>{pickerYear}</span>
+              <span>{pickerYear + 543}</span>
               <button
                 onClick={() => setPickerYear(pickerYear + 1)}
                 className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
               >
-                Next Year
+                ปีหน้า
               </button>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -394,7 +380,7 @@ const EventsCalendar = () => {
                     setShowDatePicker(false);
                   }}
                 >
-                  {month.substring(0, 3)}
+                  {month} {/* แสดงชื่อเดือนเต็ม */}
                 </button>
               ))}
             </div>
@@ -414,15 +400,12 @@ const EventsCalendar = () => {
       {showModal &&
         selectedDate &&
         getEventsForDate(currentYear, currentMonth, selectedDate) && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6 text-white">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-2xl font-bold">
-                  {monthNames[currentMonth]} {selectedDate}, {currentYear}
+                  {selectedDate} {monthNames[currentMonth]}  {currentYear}
                 </h3>
-                <button onClick={closeModal}>
-                  <X />
-                </button>
               </div>
               <div className="space-y-4">
                 {getEventsForDate(currentYear, currentMonth, selectedDate).map(
@@ -441,6 +424,15 @@ const EventsCalendar = () => {
                         <MapPin className="w-4 h-4 mr-2" /> {event.venue}
                       </div>
                       <p className="text-gray-300">{event.description}</p>
+                      {event.signupdeadline && (
+                        <div className="flex items-center text-yellow-300 mt-2">
+                          <Clock className="w-4 h-4 mr-2" />
+                          ลงสมัครได้ถึง :{" "}
+                          {new Date(event.signupdeadline).toLocaleDateString(
+                            "th-TH"
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 )}
