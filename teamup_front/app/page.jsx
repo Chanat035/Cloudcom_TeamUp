@@ -15,7 +15,7 @@ export default function Home() {
   const clientId = "2sqjfuh2t12b1djlpnbjq9beba";
   const redirectUri = "http://localhost:3100/callback";
   const responseType = "code";
-  const scope = "phone+openid+email";
+  const scope = "profile openid email";
 
   const loginUrl = `${cognitoDomain}/login?client_id=${clientId}&response_type=${responseType}&scope=${scope}&redirect_uri=${redirectUri}`;
 

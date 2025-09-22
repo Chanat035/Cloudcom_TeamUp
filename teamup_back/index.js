@@ -8,7 +8,13 @@ import { Issuer } from "openid-client";
 import { Client } from "ssh2";
 import net from "net";
 import multer from "multer";
-import { S3Client, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
+import http from "http";
+import { Server } from "socket.io";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -59,7 +65,7 @@ async function initializeDatabase() {
             user: process.env.DB_USER,
             password: process.env.DB_PASS,
             database: process.env.DB_NAME,
-            ssl: { rejectUnauthorized: false }
+            ssl: { rejectUnauthorized: false },
           });
 
           try {
@@ -82,7 +88,6 @@ async function initializeDatabase() {
   });
 }
 
-
 // Initialize database connection with SSH tunnel
 let pool;
 initializeDatabase()
@@ -101,6 +106,7 @@ initializeDatabase()
   });
 
 const app = express();
+const server = http.createServer(app);
 
 app.use(
   cors({
@@ -108,6 +114,13 @@ app.use(
     credentials: true,
   })
 );
+
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:3100"],
+    credentials: true,
+  },
+});
 
 app.use(express.json());
 
@@ -143,25 +156,32 @@ const checkAuth = (req, res, next) => {
   next();
 };
 
-app.get("/callback", async (req,res)=>{
+app.get("/callback", async (req, res) => {
   const params = client.callbackParams(req);
-  const tokenSet = await client.callback("http://localhost:3100/callback",params,{
-    nonce:req.session.nonce,
-    state:req.session.state
-  });
+  const tokenSet = await client.callback(
+    "http://localhost:3100/callback",
+    params,
+    {
+      nonce: req.session.nonce,
+      state: req.session.state,
+    }
+  );
   const userInfo = await client.userinfo(tokenSet.access_token);
 
-  req.session.regenerate(err=>{
-    if(err){ console.error(err); return res.redirect("http://localhost:3000"); }
+  req.session.regenerate((err) => {
+    if (err) {
+      console.error(err);
+      return res.redirect("http://localhost:3000");
+    }
     req.session.userInfo = userInfo;
-    req.session.save(()=>{
+    req.session.save(() => {
       res.redirect("http://localhost:3000");
     });
   });
 });
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION,           // เช่น ap-southeast-2
+  region: process.env.AWS_REGION, // เช่น ap-southeast-2
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -170,13 +190,35 @@ const s3 = new S3Client({
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("joinActivity", ({ activityId, userId }) => {
+    socket.join(`activity_${activityId}`);
+    console.log(`User ${userId} joined room activity_${activityId}`);
+  });
+
+  socket.on("sendMessage", async ({ activityId, userId, message }) => {
+    const result = await pool.query(
+      "INSERT INTO chat_message (activity_id, user_id, message) VALUES ($1, $2, $3) RETURNING *",
+      [activityId, userId, message]
+    );
+    const savedMessage = result.rows[0];
+    io.to(`activity_${activityId}`).emit("newMessage", savedMessage);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
 app.get("/", checkAuth, (req, res) => {
   res.redirect("http://localhost:3000");
 });
 
 app.get("/createActivity", checkAuth, (req, res) => {
   if (!req.isAuthenticated) {
-    return res.redirect('/login');
+    return res.redirect("/login");
   }
   // redirect ไปที่ frontend page
   res.redirect("http://localhost:3000/createActivity");
@@ -184,7 +226,7 @@ app.get("/createActivity", checkAuth, (req, res) => {
 
 app.get("/eventSchedule", checkAuth, (req, res) => {
   if (!req.isAuthenticated) {
-    return res.redirect('/login');
+    return res.redirect("/login");
   }
   // redirect ไปที่ frontend page
   res.redirect("http://localhost:3000/eventSchedule");
@@ -192,7 +234,7 @@ app.get("/eventSchedule", checkAuth, (req, res) => {
 
 app.get("/eventDetail/:id", checkAuth, (req, res) => {
   if (!req.isAuthenticated) {
-    return res.redirect('/login');
+    return res.redirect("/login");
   }
   // redirect ไปหน้า frontend ที่แสดงรายละเอียดกิจกรรม
   res.redirect(`http://localhost:3000/eventDetail/${req.params.id}`);
@@ -200,10 +242,18 @@ app.get("/eventDetail/:id", checkAuth, (req, res) => {
 
 app.get("/profile", checkAuth, (req, res) => {
   if (!req.isAuthenticated) {
-    return res.redirect('/login');
+    return res.redirect("/login");
   }
   // redirect ไปที่ profile page
   res.redirect("http://localhost:3000/profile");
+});
+
+app.get("/groupChat", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect("/login");
+  }
+  // redirect ไปที่ groupChat page
+  res.redirect("http://localhost:3000/groupChat");
 });
 
 app.get("/login", (req, res) => {
@@ -212,7 +262,7 @@ app.get("/login", (req, res) => {
   const clientId = "2sqjfuh2t12b1djlpnbjq9beba";
   const redirectUri = "http://localhost:3100/callback";
   const responseType = "code";
-  const scope = "phone+openid+email";
+  const scope = "profile openid email";
 
   const loginUrl = `${cognitoDomain}/login?client_id=${clientId}&response_type=${responseType}&scope=${scope}&redirect_uri=${redirectUri}`;
 
@@ -265,12 +315,12 @@ app.post("/api/createActivity", async (req, res) => {
       endDate,
       signUpDeadline,
       description,
-      location
+      location,
     } = req.body;
 
     if (!name || !owner || !startDate || !endDate) {
       return res.status(400).json({
-        error: "Missing required fields"
+        error: "Missing required fields",
       });
     }
 
@@ -290,7 +340,7 @@ app.post("/api/createActivity", async (req, res) => {
       endDate,
       signUpDeadline,
       description,
-      location
+      location,
     ];
 
     const result = await pool.query(query, values);
@@ -307,9 +357,9 @@ app.post("/api/createActivity", async (req, res) => {
 
     res.status(201).json(newActivity);
   } catch (err) {
-    console.error('Error creating activity:', err);
+    console.error("Error creating activity:", err);
     res.status(500).json({
-      error: "Failed to create activity"
+      error: "Failed to create activity",
     });
   }
 });
@@ -382,26 +432,30 @@ app.post("/api/eventDetail/:id/join", checkAuth, async (req, res) => {
   }
 });
 
-app.get("/api/eventDetail/:id/checkParticipant", checkAuth, async (req, res) => {
-  if (!req.isAuthenticated) {
-    return res.json({ joined: false });
+app.get(
+  "/api/eventDetail/:id/checkParticipant",
+  checkAuth,
+  async (req, res) => {
+    if (!req.isAuthenticated) {
+      return res.json({ joined: false });
+    }
+
+    const activityId = req.params.id;
+    const userId = req.session.userInfo.sub;
+
+    try {
+      const result = await pool.query(
+        "SELECT 1 FROM activity_participant WHERE activity_id = $1 AND user_id = $2",
+        [activityId, userId]
+      );
+
+      res.json({ joined: result.rows.length > 0 });
+    } catch (err) {
+      console.error("Error checking participant:", err);
+      res.status(500).json({ joined: false });
+    }
   }
-
-  const activityId = req.params.id;
-  const userId = req.session.userInfo.sub;
-
-  try {
-    const result = await pool.query(
-      "SELECT 1 FROM activity_participant WHERE activity_id = $1 AND user_id = $2",
-      [activityId, userId]
-    );
-
-    res.json({ joined: result.rows.length > 0 });
-  } catch (err) {
-    console.error("Error checking participant:", err);
-    res.status(500).json({ joined: false });
-  }
-});
+);
 
 // ✅ ดึงกิจกรรมที่ user เป็น organizer
 app.get("/api/myGroups", checkAuth, async (req, res) => {
@@ -432,30 +486,68 @@ app.get("/api/myGroups", checkAuth, async (req, res) => {
   }
 });
 
-app.post("/api/uploadProfile", checkAuth, upload.single("profileImage"), async (req, res) => {
-  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+// ✅ กลุ่มทั้งหมดที่ user joined (ไม่สน role)
+app.get("/api/myGroups/chat", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const userId = req.session.userInfo.sub;
+
   try {
-    const userId = req.session.userInfo.sub; // จาก Cognito
-    const file = req.file;
-    const key = `user/${userId}/${file.originalname}`;
+    const result = await pool.query(
+      `
+      SELECT a.id, a.name, a.category, a.startDate, a.endDate, a.location
+      FROM activity a
+      JOIN activity_participant ap 
+        ON a.id = ap.activity_id
+      WHERE ap.user_id = $1 
+        AND ap.status = 'joined'
+      ORDER BY a.startDate ASC
+      `,
+      [userId]
+    );
 
-    await s3.send(new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    }));
-
-    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-    res.json({ imageUrl });
+    res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Upload failed" });
+    console.error("Error fetching chat groups:", err);
+    res.status(500).json({ error: "Failed to fetch chat groups" });
   }
 });
 
+app.post(
+  "/api/uploadProfile",
+  checkAuth,
+  upload.single("profileImage"),
+  async (req, res) => {
+    if (!req.isAuthenticated)
+      return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const userId = req.session.userInfo.sub; // จาก Cognito
+      const file = req.file;
+      const key = `user/${userId}/${file.originalname}`;
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        })
+      );
+
+      const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+      res.json({ imageUrl });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  }
+);
+
 app.get("/api/getProfile", checkAuth, async (req, res) => {
-  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
 
   const userId = req.session.userInfo.sub;
 
@@ -485,38 +577,47 @@ app.get("/api/getProfile", checkAuth, async (req, res) => {
   }
 });
 
-app.post("/api/uploadActivityImage/:activityId", checkAuth, upload.single("activityImage"), async (req, res) => {
-  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+app.post(
+  "/api/uploadActivityImage/:activityId",
+  checkAuth,
+  upload.single("activityImage"),
+  async (req, res) => {
+    if (!req.isAuthenticated)
+      return res.status(401).json({ error: "Unauthorized" });
 
-  const activityId = req.params.activityId; // รับ activityId จาก URL parameter
+    const activityId = req.params.activityId; // รับ activityId จาก URL parameter
 
-  if (!activityId) {
-    return res.status(400).json({ error: "Missing activityId" });
+    if (!activityId) {
+      return res.status(400).json({ error: "Missing activityId" });
+    }
+
+    try {
+      const file = req.file;
+      // ✅ แก้ไข Key ให้มี prefix เป็น 'activity/activityId/'
+      const key = `activity/${activityId}/${file.originalname}`;
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        })
+      );
+
+      // ไม่จำเป็นต้องตอบกลับ imageUrl
+      res.json({ message: "Upload successful" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Upload failed" });
+    }
   }
-
-  try {
-    const file = req.file;
-    // ✅ แก้ไข Key ให้มี prefix เป็น 'activity/activityId/'
-    const key = `activity/${activityId}/${file.originalname}`; 
-
-    await s3.send(new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    }));
-
-    // ไม่จำเป็นต้องตอบกลับ imageUrl
-    res.json({ message: "Upload successful" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Upload failed" });
-  }
-});
+);
 
 app.get("/api/getActivityImage/:id", async (req, res) => {
   const activityId = req.params.id;
-  const defaultImageUrl = "https://teamupbucket035.s3.ap-southeast-2.amazonaws.com/activity/Default-Activity-Image/default-activity.jpg";
+  const defaultImageUrl =
+    "https://teamupbucket035.s3.ap-southeast-2.amazonaws.com/activity/Default-Activity-Image/default-activity.jpg";
 
   try {
     const command = new ListObjectsV2Command({
@@ -536,11 +637,59 @@ app.get("/api/getActivityImage/:id", async (req, res) => {
 
     const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${latestObject.Key}`;
     res.json({ imageUrl });
-
   } catch (err) {
     console.error("Error fetching activity image:", err);
-    res.status(500).json({ imageUrl: defaultImageUrl, error: "Failed to fetch activity image" });
+    res.status(500).json({
+      imageUrl: defaultImageUrl,
+      error: "Failed to fetch activity image",
+    });
   }
+});
+
+app.get("/api/activity/:id/messages", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
+  const activityId = req.params.id;
+  const result = await pool.query(
+    `SELECT id, activity_id, user_id, user_name, message, created_at
+     FROM chat_message
+     WHERE activity_id = $1
+     ORDER BY created_at ASC`,
+    [activityId]
+  );
+
+  res.json(result.rows);
+});
+
+app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
+
+  const activityId = req.params.id;
+  const userId = req.session.userInfo.sub;
+
+  // Map name จาก session
+  const userName =
+    req.session.userInfo.name ||
+    req.session.userInfo.given_name ||
+    req.session.userInfo.preferred_username ||
+    req.session.userInfo["cognito:username"] ||
+    "Unknown";
+
+  const { message } = req.body;
+
+  if (!message?.trim()) {
+    return res.status(400).json({ error: "Message required" });
+  }
+
+  const result = await pool.query(
+    `INSERT INTO chat_message (activity_id, user_id, user_name, message)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [activityId, userId, userName, message]
+  );
+
+  res.status(201).json(result.rows[0]);
 });
 
 const PORT = process.env.PORT || 3100;

@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.891.0",
+    "aws-sdk": "^2.1692.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
@@ -20,6 +21,7 @@
     "net": "^1.0.2",
     "openid-client": "^5.6.5",
     "pg": "^8.16.3",
+    "socket.io": "^4.8.1",
     "ssh2": "^1.17.0"
   }
 }
