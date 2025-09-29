@@ -205,7 +205,7 @@ export default function CreateActivityPage() {
         {/* User Info */}
         <div className="text-right mb-4">
           <span className="text-sm text-gray-600">
-            ผู้ใช้: {userInfo.email || userInfo.username || 'ไม่ระบุ'} | 
+            ผู้ใช้: {userInfo.name || 'ไม่ระบุ'} | 
             <a href="http://localhost:3100/logout" className="ml-2 text-blue-600 hover:underline">
               ออกจากระบบ
             </a>

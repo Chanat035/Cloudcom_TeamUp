@@ -59,7 +59,9 @@ const EventDetail = () => {
 
   const fetchActivityImage = async () => {
     try {
-      const res = await fetch(`http://localhost:3100/api/getActivityImage/${id}`);
+      const res = await fetch(
+        `http://localhost:3100/api/getActivityImage/${id}`
+      );
       const data = await res.json();
       setActivityImageUrl(data.imageUrl);
     } catch (err) {
@@ -118,6 +120,36 @@ const EventDetail = () => {
       }
     } catch (err) {
       console.error("Join failed:", err);
+      alert("เกิดข้อผิดพลาด");
+    }
+  };
+
+  // เพิ่มฟังก์ชันใหม่สำหรับออกจากกิจกรรม
+  const handleCancelParticipation = async () => {
+    const confirmed = window.confirm(
+      "คุณแน่ใจหรือไม่ว่าต้องการออกจากกิจกรรมนี้?"
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:3100/api/eventDetail/${id}/cancel`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("คุณได้ออกจากกิจกรรมแล้ว");
+        setHasJoined(false);
+      } else {
+        alert(data.error || "ไม่สามารถออกจากกิจกรรมได้");
+      }
+    } catch (err) {
+      console.error("Cancel failed:", err);
       alert("เกิดข้อผิดพลาด");
     }
   };
@@ -193,9 +225,7 @@ const EventDetail = () => {
       {/* ✅ Container รูปภาพกิจกรรม: ขนาด 520x520 พิกเซล พร้อมปรับรูปให้พอดี */}
       <div className="max-w-6xl mx-auto px-6 py-4">
         {activityImageUrl && (
-          <div
-            className="w-full h-[520px] overflow-hidden rounded-xl shadow-lg mx-auto bg-gray-800"
-          >
+          <div className="w-full h-[520px] overflow-hidden rounded-xl shadow-lg mx-auto bg-gray-800">
             <img
               src={activityImageUrl}
               alt={eventData.name}
@@ -254,21 +284,36 @@ const EventDetail = () => {
           </div>
 
           <div className="p-6 flex justify-end">
-            <button
-              onClick={handleJoin}
-              disabled={hasJoined || isSignUpClosed()}
-              className={`px-6 py-3 rounded-lg shadow font-bold transition-colors ${
-                hasJoined || isSignUpClosed()
-                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-yellow-500 text-black hover:bg-yellow-400"
-              }`}
-            >
-              {hasJoined
-                ? "เข้าร่วมแล้ว"
-                : isSignUpClosed()
-                ? "หมดเขตรับสมัครแล้ว"
-                : "เข้าร่วมกิจกรรม"}
-            </button>
+            {userInfo?.sub === eventData.owner ? (
+              // Organizer
+              <button
+                onClick={() => router.push(`/editActivity/${id}`)}
+                className="px-6 py-3 rounded-lg shadow font-bold bg-blue-500 text-white hover:bg-blue-400 transition-colors"
+              >
+                แก้ไขกิจกรรม
+              </button>
+            ) : hasJoined ? (
+              // ถ้าเข้าร่วมแล้ว → โชว์ปุ่มออกจากกิจกรรม
+              <button
+                onClick={handleCancelParticipation}
+                className="px-6 py-3 rounded-lg shadow font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"
+              >
+                ออกจากกิจกรรม
+              </button>
+            ) : (
+              // ยังไม่เข้าร่วม → โชว์ปุ่มเข้าร่วม
+              <button
+                onClick={handleJoin}
+                disabled={isSignUpClosed()}
+                className={`px-6 py-3 rounded-lg shadow font-bold transition-colors ${
+                  isSignUpClosed()
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : "bg-yellow-500 text-black hover:bg-yellow-400"
+                }`}
+              >
+                {isSignUpClosed() ? "หมดเขตรับสมัครแล้ว" : "เข้าร่วมกิจกรรม"}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -15,6 +15,12 @@ import {
 } from "@aws-sdk/client-s3";
 import http from "http";
 import { Server } from "socket.io";
+import {
+  AdminGetUserCommand,
+  AdminUpdateUserAttributesCommand,
+  CognitoIdentityProviderClient,
+  AdminSetUserPasswordCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -107,6 +113,13 @@ initializeDatabase()
 
 const app = express();
 const server = http.createServer(app);
+const cognitoClient = new CognitoIdentityProviderClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 app.use(
   cors({
@@ -173,7 +186,14 @@ app.get("/callback", async (req, res) => {
       console.error(err);
       return res.redirect("http://localhost:3000");
     }
-    req.session.userInfo = userInfo;
+
+    // 🆕 เก็บ userInfo + accessToken ลง session
+    req.session.userInfo = {
+      ...userInfo,
+      accessToken: tokenSet.access_token,
+      idToken: tokenSet.id_token, // เก็บเผื่อไว้ถ้าจะใช้อัปเดต claims ฝั่ง client
+    };
+
     req.session.save(() => {
       res.redirect("http://localhost:3000");
     });
@@ -181,7 +201,7 @@ app.get("/callback", async (req, res) => {
 });
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION, // เช่น ap-southeast-2
+  region: process.env.AWS_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -432,6 +452,28 @@ app.post("/api/eventDetail/:id/join", checkAuth, async (req, res) => {
   }
 });
 
+app.put("/api/eventDetail/:id/cancel", checkAuth, async (req, res) => {
+  const activityId = req.params.id;
+  const userId = req.session.userInfo.sub; // Cognito user id
+
+  try {
+    const query = `
+      INSERT INTO activity_participant (activity_id, user_id, status, role)
+      VALUES ($1, $2, 'canceled', 'participant')
+      ON CONFLICT (activity_id, user_id)
+      DO UPDATE SET status = 'canceled'
+      RETURNING *;
+    `;
+    const values = [activityId, userId];
+
+    const result = await pool.query(query, values);
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error canceling activity:", err);
+    res.status(500).json({ error: "Failed to cancel activity" });
+  }
+});
+
 app.get(
   "/api/eventDetail/:id/checkParticipant",
   checkAuth,
@@ -577,6 +619,121 @@ app.get("/api/getProfile", checkAuth, async (req, res) => {
   }
 });
 
+app.get("/api/settings/getInterests", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
+
+  const userId = req.session.userInfo.sub;
+  try {
+    const result = await cognitoClient.send(
+      new AdminGetUserCommand({
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Username: userId,
+      })
+    );
+
+    const attr = result.UserAttributes.find(
+      (a) => a.Name === "custom:interests"
+    );
+    const interests = attr ? JSON.parse(attr.Value) : [];
+
+    res.json({ interests });
+  } catch (err) {
+    console.error("Error fetching interests:", err);
+    res.status(500).json({ error: "Failed to fetch interests" });
+  }
+});
+
+app.post("/api/settings/changeInterests", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
+
+  const userId = req.session.userInfo.sub;
+  const { interests } = req.body;
+
+  if (!Array.isArray(interests) || interests.length > 3) {
+    return res
+      .status(400)
+      .json({ error: "Interests must be an array with up to 3 items" });
+  }
+
+  try {
+    await cognitoClient.send(
+      new AdminUpdateUserAttributesCommand({
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Username: userId,
+        UserAttributes: [
+          {
+            Name: "custom:interests",
+            Value: JSON.stringify(interests), // เก็บเป็น JSON string
+          },
+        ],
+      })
+    );
+
+    res.json({ success: true, interests });
+  } catch (err) {
+    console.error("Error updating interests:", err);
+    res.status(500).json({ error: "Failed to update interests" });
+  }
+});
+
+// ✅ เปลี่ยนชื่อ
+app.post("/api/settings/changeName", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
+
+  const userId = req.session.userInfo.sub; // Cognito user id
+  const { newName } = req.body;
+
+  if (!newName) return res.status(400).json({ error: "Name required" });
+
+  try {
+    await cognitoClient.send(
+      new AdminUpdateUserAttributesCommand({
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Username: userId,
+        UserAttributes: [{ Name: "name", Value: newName }],
+      })
+    );
+
+    req.session.userInfo.name = newName;
+    res.json({ success: true, name: newName });
+  } catch (err) {
+    console.error("Error updating name:", err);
+    res.status(500).json({ error: "Failed to update name" });
+  }
+});
+
+// ✅ เปลี่ยนรหัสผ่าน
+app.post("/api/settings/changePassword", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
+
+  const userId = req.session.userInfo.sub;
+  const { newPassword } = req.body;
+
+  if (!newPassword) {
+    return res.status(400).json({ error: "New password required" });
+  }
+
+  try {
+    await cognitoClient.send(
+      new AdminSetUserPasswordCommand({
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Username: userId,
+        Password: newPassword,
+        Permanent: true, // ให้ใช้ password นี้ถาวร
+      })
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error changing password:", err);
+    res.status(500).json({ error: "Failed to change password" });
+  }
+});
+
 app.post(
   "/api/uploadActivityImage/:activityId",
   checkAuth,
@@ -690,6 +847,147 @@ app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
   );
 
   res.status(201).json(result.rows[0]);
+});
+
+// ✅ อัปเดตกิจกรรม
+app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const activityId = req.params.id;
+  const userId = req.session.userInfo.sub;
+
+  try {
+    // ✅ ต้องมี record เป็น organizer เท่านั้น ไม่เจอถือว่าไม่มีสิทธิ์
+    const check = await pool.query(
+      `SELECT 1
+       FROM activity_participant
+       WHERE activity_id = $1 AND user_id = $2 AND role = 'organizer'`,
+      [activityId, userId]
+    );
+
+    if (check.rows.length === 0) {
+      return res
+        .status(403)
+        .json({ error: "Forbidden: You are not organizer of this activity" });
+    }
+
+    const {
+      name,
+      category,
+      startDate,
+      endDate,
+      signUpDeadline,
+      description,
+      location,
+    } = req.body;
+
+    if (!name || !startDate || !endDate) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const result = await pool.query(
+      `UPDATE activity
+       SET name=$1, category=$2, startDate=$3, endDate=$4,
+           signUpDeadline=$5, description=$6, location=$7
+       WHERE id=$8
+       RETURNING *`,
+      [name, category, startDate, endDate, signUpDeadline, description, location, activityId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error editing activity:", err);
+    res.status(500).json({ error: "Failed to edit activity" });
+  }
+});
+
+
+// ✅ ดึงผู้เข้าร่วมกิจกรรม
+app.get("/api/activity/:id/participants", async (req, res) => {
+  const activityId = req.params.id;
+  try {
+    const result = await pool.query(
+      `
+      SELECT user_id, status, role
+      FROM activity_participant
+      WHERE activity_id = $1
+      ORDER BY role DESC, status ASC
+      `,
+      [activityId]
+    );
+
+    const participants = await Promise.all(
+      result.rows.map(async (row) => {
+        try {
+          const cognitoRes = await cognitoClient.send(
+            new AdminGetUserCommand({
+              UserPoolId: process.env.COGNITO_USER_POOL_ID,
+              Username: row.user_id,
+            })
+          );
+
+          // ✅ ใช้ name ก่อน ถ้าไม่มี ใช้ email, สุดท้าย fallback เป็น user_id
+          const name =
+            cognitoRes.UserAttributes.find((a) => a.Name === "name")?.Value ||
+            cognitoRes.UserAttributes.find((a) => a.Name === "email")?.Value ||
+            row.user_id;
+
+          return {
+            ...row,
+            name,
+          };
+        } catch (err) {
+          console.error("Error fetching Cognito user:", err);
+          return { ...row, name: row.user_id };
+        }
+      })
+    );
+
+    res.json(participants);
+  } catch (err) {
+    console.error("Error fetching participants:", err);
+    res.status(500).json({ error: "Failed to fetch participants" });
+  }
+});
+
+// ✅ อัปเดตสถานะหรือบทบาทของผู้เข้าร่วม
+app.put("/api/activity/:id/participants/:userId", async (req, res) => {
+  const { id: activityId, userId } = req.params;
+  const { status, role } = req.body;
+
+  if (!["joined", "pending", "canceled"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+  if (!["organizer", "participant"].includes(role)) {
+    return res.status(400).json({ error: "Invalid role" });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE activity_participant
+      SET status = $1, role = $2
+      WHERE activity_id = $3 AND user_id = $4
+      RETURNING *
+      `,
+      [status, role, activityId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Participant not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error updating participant:", err);
+    res.status(500).json({ error: "Failed to update participant" });
+  }
 });
 
 const PORT = process.env.PORT || 3100;
