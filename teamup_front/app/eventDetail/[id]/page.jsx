@@ -1,4 +1,4 @@
-// page.jsx
+// eventDetail/[id]/
 
 "use client";
 
@@ -154,27 +154,6 @@ const EventDetail = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    });
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
   const isSignUpClosed = () => {
     if (!eventData?.signupdeadline) return false;
     const deadline = new Date(eventData.signupdeadline);
@@ -185,6 +164,12 @@ const EventDetail = () => {
   const goBack = () => {
     router.push("/eventSchedule");
   };
+
+  function parseBangkok(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return new Date(d.getTime() - 7 * 60 * 60 * 1000);
+  }
 
   if (loading) {
     return (
@@ -255,10 +240,26 @@ const EventDetail = () => {
                   <Clock className="w-5 h-5 mr-2" />
                   วันที่
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-10 text-lg">
                   <div className="flex items-center text-gray-300">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    <span>{formatDate(eventData.startdate)}</span>
+                    เริ่มต้น :{" "}
+                    {parseBangkok(eventData.startdate)?.toLocaleString(
+                      "th-TH",
+                      {
+                        dateStyle: "long",
+                        timeStyle: "short",
+                      }
+                    )}
+                  </div>
+                  <div className="flex items-center text-gray-300">
+                    สิ้นสุด :{" "}
+                    {parseBangkok(eventData.enddate)?.toLocaleString(
+                      "th-TH",
+                      {
+                        dateStyle: "long",
+                        timeStyle: "short",
+                      }
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,3 +1,5 @@
+// eventSchedule
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -232,41 +234,11 @@ const EventsCalendar = () => {
     }
   };
 
-  const renderDatePickerGrid = () => {
-    const days = [];
-    const daysInMonth = getDaysInMonth(pickerMonth, pickerYear);
-    const firstDay = getFirstDayOfMonth(pickerMonth, pickerYear);
-
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-8"></div>);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const hasEvents = getEventsForDate(pickerYear, pickerMonth, day);
-      const isToday =
-        new Date().getDate() === day &&
-        new Date().getMonth() === pickerMonth &&
-        new Date().getFullYear() === pickerYear;
-
-      days.push(
-        <div
-          key={day}
-          className={`h-8 flex items-center justify-center cursor-pointer transition-colors text-sm ${
-            isToday
-              ? "bg-yellow-500 text-black rounded-full"
-              : hasEvents
-              ? "bg-gray-800 text-yellow-400 hover:bg-gray-700 rounded"
-              : "hover:bg-gray-700 rounded text-white"
-          }`}
-          onClick={() => handlePickerDateClick(day)}
-        >
-          {day}
-        </div>
-      );
-    }
-
-    return days;
-  };
+  function parseBangkok(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return new Date(d.getTime() - 7 * 60 * 60 * 1000);
+  }
 
   if (!authChecked)
     return <div className="text-white">Checking authentication...</div>;
@@ -404,7 +376,7 @@ const EventsCalendar = () => {
             <div className="bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6 text-white">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-2xl font-bold">
-                  {selectedDate} {monthNames[currentMonth]}  {currentYear}
+                  {selectedDate} {monthNames[currentMonth]} {currentYear}
                 </h3>
               </div>
               <div className="space-y-4">
@@ -428,8 +400,12 @@ const EventsCalendar = () => {
                         <div className="flex items-center text-yellow-300 mt-2">
                           <Clock className="w-4 h-4 mr-2" />
                           ลงสมัครได้ถึง :{" "}
-                          {new Date(event.signupdeadline).toLocaleDateString(
-                            "th-TH"
+                          {parseBangkok(event.signupdeadline)?.toLocaleString(
+                            "th-TH",
+                            {
+                              dateStyle: "long",
+                              timeStyle: "short",
+                            }
                           )}
                         </div>
                       )}

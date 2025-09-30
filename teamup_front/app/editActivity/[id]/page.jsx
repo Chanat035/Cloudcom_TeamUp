@@ -1,7 +1,12 @@
+// editActivity/[id]/
+
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import TimePicker from "react-time-picker";
+import "react-time-picker/dist/TimePicker.css";
+import "react-clock/dist/Clock.css";
 
 export default function EditActivityPage() {
   const { id } = useParams();
@@ -11,8 +16,11 @@ export default function EditActivityPage() {
     activityName: "",
     category: "",
     startDate: "",
+    startTime: "",
     endDate: "",
+    endTime: "",
     signUpDeadline: "",
+    signUpDeadlineTime: "",
     description: "",
     location: "",
   });
@@ -94,9 +102,16 @@ export default function EditActivityPage() {
       setFormData({
         activityName: data.name,
         category: data.category,
-        startDate: data.startdate?.split("T")[0] || "",
-        endDate: data.enddate?.split("T")[0] || "",
-        signUpDeadline: data.signupdate?.split("T")[0] || "",
+        startDate: data.startdate ? data.startdate.split("T")[0] : "",
+        startTime: data.startdate
+          ? data.startdate.split("T")[1]?.slice(0, 5)
+          : "",
+        endDate: data.enddate ? data.enddate.split("T")[0] : "",
+        endTime: data.enddate ? data.enddate.split("T")[1]?.slice(0, 5) : "",
+        signUpDeadline: data.signupdeadline ? data.signupdeadline.split("T")[0] : "",
+        signUpDeadlineTime: data.signupdeadline
+          ? data.signupdeadline.split("T")[1]?.slice(0, 5)
+          : "",
         description: data.description,
         location: data.location,
       });
@@ -216,9 +231,17 @@ export default function EditActivityPage() {
       const updatePayload = {
         name: formData.activityName,
         category: formData.category,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        signUpDeadline: formData.signUpDeadline,
+        startDate: formData.startDate
+          ? `${formData.startDate}T${formData.startTime || "00:00"}`
+          : null,
+        endDate: formData.endDate
+          ? `${formData.endDate}T${formData.endTime || "23:59"}`
+          : null,
+        signUpDeadline: formData.signUpDeadline
+          ? `${formData.signUpDeadline}T${
+              formData.signUpDeadlineTime || "23:59"
+            }`
+          : null,
         description: formData.description,
         location: formData.location,
       };
@@ -387,6 +410,7 @@ export default function EditActivityPage() {
 
               {/* Date Fields */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Start Date + Time */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     วันที่เริ่มต้น *
@@ -396,13 +420,23 @@ export default function EditActivityPage() {
                     name="startDate"
                     value={formData.startDate}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 text-black ${
-                      errors.startDate
-                        ? "border-red-400 bg-red-50"
-                        : "border-gray-200 focus:border-purple-400 bg-white"
-                    }`}
+                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
+                  />
+                  <TimePicker
+                    onChange={(value) =>
+                      handleInputChange({
+                        target: { name: "startTime", value: value || "" },
+                      })
+                    }
+                    value={formData.startTime || ""}
+                    disableClock
+                    format="HH:mm"
+                    clearIcon={null}
+                    className="custom-timepicker w-full mt-2"
                   />
                 </div>
+
+                {/* End Date + Time */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     วันที่สิ้นสุด *
@@ -412,13 +446,23 @@ export default function EditActivityPage() {
                     name="endDate"
                     value={formData.endDate}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 text-black ${
-                      errors.endDate
-                        ? "border-red-400 bg-red-50"
-                        : "border-gray-200 focus:border-purple-400 bg-white"
-                    }`}
+                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
+                  />
+                  <TimePicker
+                    onChange={(value) =>
+                      handleInputChange({
+                        target: { name: "endTime", value: value || "" },
+                      })
+                    }
+                    value={formData.endTime || ""}
+                    disableClock
+                    format="HH:mm"
+                    clearIcon={null}
+                    className="custom-timepicker w-full mt-2"
                   />
                 </div>
+
+                {/* SignUp Deadline + Time */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     วันปิดรับสมัคร *
@@ -428,11 +472,22 @@ export default function EditActivityPage() {
                     name="signUpDeadline"
                     value={formData.signUpDeadline}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 text-black ${
-                      errors.signUpDeadline
-                        ? "border-red-400 bg-red-50"
-                        : "border-gray-200 focus:border-purple-400 bg-white"
-                    }`}
+                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
+                  />
+                  <TimePicker
+                    onChange={(value) =>
+                      handleInputChange({
+                        target: {
+                          name: "signUpDeadlineTime",
+                          value: value || "",
+                        },
+                      })
+                    }
+                    value={formData.signUpDeadlineTime || ""}
+                    disableClock
+                    format="HH:mm"
+                    clearIcon={null}
+                    className="custom-timepicker w-full mt-2"
                   />
                 </div>
               </div>

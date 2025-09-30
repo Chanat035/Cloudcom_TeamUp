@@ -1,3 +1,5 @@
+// profile
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -360,7 +362,9 @@ const ProfilePage = () => {
             >
               ✕
             </button>
-            <h2 className="text-xl text-black font-bold mb-4">เปลี่ยนรหัสผ่าน</h2>
+            <h2 className="text-xl text-black font-bold mb-4">
+              เปลี่ยนรหัสผ่าน
+            </h2>
             <input
               type="password"
               placeholder="Old Password"

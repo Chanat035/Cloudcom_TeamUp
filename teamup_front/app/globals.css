@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* รีเซ็ต style ของ react-time-picker */
+.custom-timepicker .react-time-picker__wrapper {
+  border: 2px solid #e5e7eb; /* เทาเหมือน border-gray-200 */
+  border-radius: 1rem;       /* rounded-2xl */
+  padding: 0.75rem 1.5rem;   /* px-6 py-4 */
+  font-size: 1rem;           /* text-base */
+  color: black;
+  transition: all 0.3s ease;
+}
+
+.custom-timepicker .react-time-picker__wrapper:focus-within {
+  border-color: #a855f7; /* purple-400 */
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.2); /* focus:ring-purple-500/20 */
+}
+
+.custom-timepicker .react-time-picker__inputGroup__input {
+  outline: none;
+}
+

@@ -403,7 +403,7 @@ app.get("/api/eventDetail/:id", async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT id, name, owner, category, startDate, endDate, signUpDeadline, description, location
+      SELECT id, name, owner, category, startdate, enddate, signUpdeadline, description, location
       FROM activity
       WHERE id = $1
       `,

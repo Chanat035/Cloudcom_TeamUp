@@ -1,34 +1,41 @@
+// createActivity
+
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import TimePicker from "react-time-picker";
+import "react-time-picker/dist/TimePicker.css";
+import "react-clock/dist/Clock.css";
 
 export default function CreateActivityPage() {
   const [formData, setFormData] = useState({
-    // ... (existing form fields)
-    activityName: '',
-    category: '',
-    startDate: '',
-    endDate: '',
-    signUpDeadline: '',
-    description: '',
-    location: ''
+    activityName: "",
+    category: "",
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    endTime: "",
+    signUpDeadline: "",
+    signUpDeadlineTime: "",
+    description: "",
+    location: "",
   });
 
-  const [activityImage, setActivityImage] = useState(null); 
+  const [activityImage, setActivityImage] = useState(null);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
 
   const categories = [
-    'กีฬา',
-    'ศิลปะและวัฒนธรรม',
-    'การศึกษา',
-    'เทคโนโลยี',
-    'สุขภาพและความงาม',
-    'ธุรกิจและการตลาด',
-    'การท่องเที่ยว',
-    'อาสาสมัครและการกุศล',
-    'อื่นๆ'
+    "กีฬา",
+    "ศิลปะและวัฒนธรรม",
+    "การศึกษา",
+    "เทคโนโลยี",
+    "สุขภาพและความงาม",
+    "ธุรกิจและการตลาด",
+    "การท่องเที่ยว",
+    "อาสาสมัครและการกุศล",
+    "อื่นๆ",
   ];
 
   useEffect(() => {
@@ -37,34 +44,34 @@ export default function CreateActivityPage() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3100/api/auth/status', {
-        credentials: 'include'
+      const response = await fetch("http://localhost:3100/api/auth/status", {
+        credentials: "include",
       });
       const data = await response.json();
-      
+
       if (!data.isAuthenticated) {
-        window.location.href = 'http://localhost:3100/login';
+        window.location.href = "http://localhost:3100/login";
         return;
       }
-      
+
       setUserInfo(data.userInfo);
     } catch (error) {
-      console.error('Auth check failed:', error);
-      window.location.href = 'http://localhost:3100/login';
+      console.error("Auth check failed:", error);
+      window.location.href = "http://localhost:3100/login";
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    
+
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
@@ -76,20 +83,31 @@ export default function CreateActivityPage() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.activityName.trim()) newErrors.activityName = 'กรุณากรอกชื่อกิจกรรม';
-    if (!formData.category) newErrors.category = 'กรุณาเลือกหมวดหมู่';
-    if (!formData.startDate) newErrors.startDate = 'กรุณาเลือกวันที่เริ่มต้น';
-    if (!formData.endDate) newErrors.endDate = 'กรุณาเลือกวันที่สิ้นสุด';
-    if (!formData.signUpDeadline) newErrors.signUpDeadline = 'กรุณาเลือกวันที่ปิดรับสมัคร';
-    if (!formData.description.trim()) newErrors.description = 'กรุณากรอกรายละเอียดกิจกรรม';
-    if (!formData.location.trim()) newErrors.location = 'กรุณากรอกสถานที่';
+    if (!formData.activityName.trim())
+      newErrors.activityName = "กรุณากรอกชื่อกิจกรรม";
+    if (!formData.category) newErrors.category = "กรุณาเลือกหมวดหมู่";
+    if (!formData.startDate) newErrors.startDate = "กรุณาเลือกวันที่เริ่มต้น";
+    if (!formData.endDate) newErrors.endDate = "กรุณาเลือกวันที่สิ้นสุด";
+    if (!formData.signUpDeadline)
+      newErrors.signUpDeadline = "กรุณาเลือกวันที่ปิดรับสมัคร";
+    if (!formData.description.trim())
+      newErrors.description = "กรุณากรอกรายละเอียดกิจกรรม";
+    if (!formData.location.trim()) newErrors.location = "กรุณากรอกสถานที่";
 
-    if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
-      newErrors.endDate = 'วันสิ้นสุดต้องมาหลังวันเริ่มต้น';
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      formData.startDate > formData.endDate
+    ) {
+      newErrors.endDate = "วันสิ้นสุดต้องมาหลังวันเริ่มต้น";
     }
 
-    if (formData.signUpDeadline && formData.startDate && formData.signUpDeadline > formData.startDate) {
-      newErrors.signUpDeadline = 'วันปิดรับสมัครต้องมาก่อนวันเริ่มกิจกรรม';
+    if (
+      formData.signUpDeadline &&
+      formData.startDate &&
+      formData.signUpDeadline > formData.startDate
+    ) {
+      newErrors.signUpDeadline = "วันปิดรับสมัครต้องมาก่อนวันเริ่มกิจกรรม";
     }
 
     setErrors(newErrors);
@@ -103,66 +121,80 @@ export default function CreateActivityPage() {
     setIsLoading(true);
 
     try {
-      // ✅ ขั้นตอนที่ 1: สร้างกิจกรรมก่อน
       const activityPayload = {
         name: formData.activityName,
-        owner: userInfo?.sub || 'anonymous',
+        owner: userInfo?.sub || "anonymous",
         category: formData.category,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        signUpDeadline: formData.signUpDeadline,
+        startDate: formData.startDate
+          ? `${formData.startDate}T${formData.startTime || "00:00"}`
+          : null,
+        endDate: formData.endDate
+          ? `${formData.endDate}T${formData.endTime || "23:59"}`
+          : null,
+        signUpDeadline: formData.signUpDeadline
+          ? `${formData.signUpDeadline}T${
+              formData.signUpDeadlineTime || "23:59"
+            }`
+          : null,
         description: formData.description,
-        location: formData.location
+        location: formData.location,
       };
 
-      const createActivityResponse = await fetch('http://localhost:3100/api/createActivity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(activityPayload),
-        credentials: 'include'
-      });
+      const createActivityResponse = await fetch(
+        "http://localhost:3100/api/createActivity",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(activityPayload),
+          credentials: "include",
+        }
+      );
 
       if (!createActivityResponse.ok) {
         const errorData = await createActivityResponse.json();
-        throw new Error(errorData.error || 'Failed to create activity');
+        throw new Error(errorData.error || "Failed to create activity");
       }
 
       const result = await createActivityResponse.json();
-      const activityId = result.id; // ดึง activityId ที่ได้มา
+      const activityId = result.id;
 
-      // ✅ ขั้นตอนที่ 2: อัปโหลดรูปภาพ ถ้ามี
       if (activityImage) {
         const imageFormData = new FormData();
-        imageFormData.append('activityImage', activityImage);
+        imageFormData.append("activityImage", activityImage);
 
-        const uploadResponse = await fetch(`http://localhost:3100/api/uploadActivityImage/${activityId}`, {
-          method: 'POST',
-          body: imageFormData,
-          credentials: 'include'
-        });
+        const uploadResponse = await fetch(
+          `http://localhost:3100/api/uploadActivityImage/${activityId}`,
+          {
+            method: "POST",
+            body: imageFormData,
+            credentials: "include",
+          }
+        );
 
         if (!uploadResponse.ok) {
-          throw new Error('Failed to upload image.');
+          throw new Error("Failed to upload image.");
         }
       }
 
-      alert('สร้างกิจกรรมสำเร็จ! 🎉');
-      console.log('Created activity with ID:', activityId);
-      
+      alert("สร้างกิจกรรมสำเร็จ! 🎉");
+      console.log("Created activity with ID:", activityId);
+
       setFormData({
-        activityName: '',
-        category: '',
-        startDate: '',
-        endDate: '',
-        signUpDeadline: '',
-        description: '',
-        location: ''
+        activityName: "",
+        category: "",
+        startDate: "",
+        startTime: "",
+        endDate: "",
+        endTime: "",
+        signUpDeadline: "",
+        signUpDeadlineTime: "",
+        description: "",
+        location: "",
       });
       setActivityImage(null);
-      
     } catch (error) {
-      console.error('Error:', error);
-      alert('เกิดข้อผิดพลาดในการสร้างกิจกรรม: ' + error.message);
+      console.error("Error:", error);
+      alert("เกิดข้อผิดพลาดในการสร้างกิจกรรม: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -170,33 +202,34 @@ export default function CreateActivityPage() {
 
   const handleReset = () => {
     setFormData({
-      activityName: '',
-      category: '',
-      startDate: '',
-      endDate: '',
-      signUpDeadline: '',
-      description: '',
-      location: ''
+      activityName: "",
+      category: "",
+      startDate: "",
+      startTime: "",
+      endDate: "",
+      endTime: "",
+      signUpDeadline: "",
+      signUpDeadlineTime: "",
+      description: "",
+      location: "",
     });
     setActivityImage(null);
     setErrors({});
   };
 
   const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
-};
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  };
 
   if (!userInfo) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังตรวจสอบสิทธิ์...</p>
-        </div>
-      </div>
-    );
+    return <div>กำลังโหลด...</div>;
   }
 
   return (
@@ -205,8 +238,11 @@ export default function CreateActivityPage() {
         {/* User Info */}
         <div className="text-right mb-4">
           <span className="text-sm text-gray-600">
-            ผู้ใช้: {userInfo.name || 'ไม่ระบุ'} | 
-            <a href="http://localhost:3100/logout" className="ml-2 text-blue-600 hover:underline">
+            ผู้ใช้: {userInfo.name || "ไม่ระบุ"} |
+            <a
+              href="http://localhost:3100/logout"
+              className="ml-2 text-blue-600 hover:underline"
+            >
               ออกจากระบบ
             </a>
           </span>
@@ -218,7 +254,8 @@ export default function CreateActivityPage() {
             สร้างกิจกรรมใหม่
           </h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            กรอกข้อมูลกิจกรรมของคุณให้ครบถ้วน เพื่อให้ผู้สนใจได้รับทราบรายละเอียดที่ชัดเจน
+            กรอกข้อมูลกิจกรรมของคุณให้ครบถ้วน
+            เพื่อให้ผู้สนใจได้รับทราบรายละเอียดที่ชัดเจน
           </p>
         </div>
 
@@ -237,9 +274,9 @@ export default function CreateActivityPage() {
                   value={formData.activityName}
                   onChange={handleInputChange}
                   className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                    errors.activityName 
-                      ? 'border-red-400 bg-red-50' 
-                      : 'border-gray-200 focus:border-purple-400 bg-white'
+                    errors.activityName
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-200 focus:border-purple-400 bg-white"
                   }`}
                   placeholder="ใส่ชื่อกิจกรรมที่น่าสนใจ"
                 />
@@ -251,7 +288,7 @@ export default function CreateActivityPage() {
               </div>
 
               {/* ... (existing fields) */}
-              
+
               {/* New: Activity Image */}
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-3">
@@ -277,14 +314,16 @@ export default function CreateActivityPage() {
                     value={formData.category}
                     onChange={handleInputChange}
                     className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20  placeholder-gray-400 text-black ${
-                      errors.category 
-                        ? 'border-red-400 bg-red-50' 
-                        : 'border-gray-200 focus:border-purple-400 bg-white'
+                      errors.category
+                        ? "border-red-400 bg-red-50"
+                        : "border-gray-200 focus:border-purple-400 bg-white"
                     }`}
                   >
                     <option value="">เลือกหมวดหมู่กิจกรรม</option>
                     {categories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
                     ))}
                   </select>
                   {errors.category && (
@@ -304,9 +343,9 @@ export default function CreateActivityPage() {
                     value={formData.location}
                     onChange={handleInputChange}
                     className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                      errors.location 
-                        ? 'border-red-400 bg-red-50' 
-                        : 'border-gray-200 focus:border-purple-400 bg-white'
+                      errors.location
+                        ? "border-red-400 bg-red-50"
+                        : "border-gray-200 focus:border-purple-400 bg-white"
                     }`}
                     placeholder="สถานที่จัดกิจกรรม"
                   />
@@ -320,6 +359,7 @@ export default function CreateActivityPage() {
 
               {/* Date Fields */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Start Date + Time */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     วันที่เริ่มต้น *
@@ -329,19 +369,23 @@ export default function CreateActivityPage() {
                     name="startDate"
                     value={formData.startDate}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                      errors.startDate 
-                        ? 'border-red-400 bg-red-50' 
-                        : 'border-gray-200 focus:border-purple-400 bg-white'
-                    }`}
+                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
                   />
-                  {errors.startDate && (
-                    <p className="text-red-500 text-sm mt-2 flex items-center">
-                      <span className="mr-1">⚠️</span> {errors.startDate}
-                    </p>
-                  )}
+                  <TimePicker
+                    onChange={(value) =>
+                      handleInputChange({
+                        target: { name: "startTime", value: value || "" },
+                      })
+                    }
+                    value={formData.startTime || ""}
+                    disableClock
+                    format="HH:mm"
+                    clearIcon={null}
+                    className="custom-timepicker w-full mt-2"
+                  />
                 </div>
 
+                {/* End Date + Time */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     วันที่สิ้นสุด *
@@ -351,19 +395,23 @@ export default function CreateActivityPage() {
                     name="endDate"
                     value={formData.endDate}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                      errors.endDate 
-                        ? 'border-red-400 bg-red-50' 
-                        : 'border-gray-200 focus:border-purple-400 bg-white'
-                    }`}
+                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
                   />
-                  {errors.endDate && (
-                    <p className="text-red-500 text-sm mt-2 flex items-center">
-                      <span className="mr-1">⚠️</span> {errors.endDate}
-                    </p>
-                  )}
+                  <TimePicker
+                    onChange={(value) =>
+                      handleInputChange({
+                        target: { name: "endTime", value: value || "" },
+                      })
+                    }
+                    value={formData.endTime || ""}
+                    disableClock
+                    format="HH:mm"
+                    clearIcon={null}
+                    className="custom-timepicker w-full mt-2"
+                  />
                 </div>
 
+                {/* SignUp Deadline + Time */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">
                     วันปิดรับสมัคร *
@@ -373,17 +421,23 @@ export default function CreateActivityPage() {
                     name="signUpDeadline"
                     value={formData.signUpDeadline}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                      errors.signUpDeadline 
-                        ? 'border-red-400 bg-red-50' 
-                        : 'border-gray-200 focus:border-purple-400 bg-white'
-                    }`}
+                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
                   />
-                  {errors.signUpDeadline && (
-                    <p className="text-red-500 text-sm mt-2 flex items-center">
-                      <span className="mr-1">⚠️</span> {errors.signUpDeadline}
-                    </p>
-                  )}
+                  <TimePicker
+                    onChange={(value) =>
+                      handleInputChange({
+                        target: {
+                          name: "signUpDeadlineTime",
+                          value: value || "",
+                        },
+                      })
+                    }
+                    value={formData.signUpDeadlineTime || ""}
+                    disableClock
+                    format="HH:mm"
+                    clearIcon={null}
+                    className="custom-timepicker w-full mt-2"
+                  />
                 </div>
               </div>
 
@@ -398,9 +452,9 @@ export default function CreateActivityPage() {
                   onChange={handleInputChange}
                   rows="6"
                   className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 resize-none placeholder-gray-400 text-black ${
-                    errors.description 
-                      ? 'border-red-400 bg-red-50' 
-                      : 'border-gray-200 focus:border-purple-400 bg-white'
+                    errors.description
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-200 focus:border-purple-400 bg-white"
                   }`}
                   placeholder="บรรยายรายละเอียดกิจกรรม วัตถุประสงค์ กิจกรรมที่จะทำ และข้อมูลสำคัญอื่นๆ..."
                 />
@@ -410,7 +464,7 @@ export default function CreateActivityPage() {
                   </p>
                 )}
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-8">
                 <button
@@ -418,17 +472,19 @@ export default function CreateActivityPage() {
                   onClick={handleSubmit}
                   disabled={isLoading}
                   className={`flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 hover:shadow-xl transition-all duration-300 ${
-                    isLoading ? 'opacity-50 cursor-not-allowed transform-none' : ''
+                    isLoading
+                      ? "opacity-50 cursor-not-allowed transform-none"
+                      : ""
                   }`}
                 >
-                  {isLoading ? '⏳ กำลังบันทึก...' : '🎉 บันทึกกิจกรรม'}
+                  {isLoading ? "⏳ กำลังบันทึก..." : "🎉 บันทึกกิจกรรม"}
                 </button>
                 <button
                   type="button"
                   onClick={handleReset}
                   disabled={isLoading}
                   className={`flex-none bg-gray-100 text-gray-700 px-8 py-4 rounded-2xl font-bold hover:bg-gray-200 hover:shadow-lg transition-all duration-300 ${
-                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    isLoading ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   🔄 ล้างข้อมูล
@@ -441,18 +497,42 @@ export default function CreateActivityPage() {
         {/* Summary Card */}
         {(formData.activityName || formData.category || formData.location) && (
           <div className="mt-8 bg-white/60 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">📝 ข้อมูลที่กรอก</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">
+              📝 ข้อมูลที่กรอก
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
               <div className="space-y-3 text-black">
-                <div><strong>ชื่อกิจกรรม:</strong> {formData.activityName || '-'}</div>
-                <div><strong>หมวดหมู่:</strong> {formData.category || '-'}</div>
-                <div><strong>สถานที่:</strong> {formData.location || '-'}</div>
-                <div><strong>รายละเอียด:</strong> {formData.description ? `${formData.description.substring(0, 50)}...` : '-'}</div>
+                <div>
+                  <strong>ชื่อกิจกรรม:</strong> {formData.activityName || "-"}
+                </div>
+                <div>
+                  <strong>หมวดหมู่:</strong> {formData.category || "-"}
+                </div>
+                <div>
+                  <strong>สถานที่:</strong> {formData.location || "-"}
+                </div>
+                <div>
+                  <strong>รายละเอียด:</strong>{" "}
+                  {formData.description
+                    ? `${formData.description.substring(0, 50)}...`
+                    : "-"}
+                </div>
               </div>
               <div className="space-y-3 text-black">
-                <div><strong>วันที่ปิดรับสมัคร:</strong> {formatDate(formData.signUpDeadline) || '-'}</div>
-                <div><strong>วันที่เริ่มต้น:</strong> {formatDate(formData.startDate) || '-'}</div>
-                <div><strong>วันที่สิ้นสุด:</strong> {formatDate(formData.endDate) || '-'}</div>
+                <div>
+                  <strong>วันที่ปิดรับสมัคร:</strong>{" "}
+                  {formatDate(
+                    formData.signUpDeadline + "T" + formData.signUpDeadlineTime
+                  )}
+                </div>
+                <div>
+                  <strong>วันที่เริ่มต้น:</strong>{" "}
+                  {formatDate(formData.startDate + "T" + formData.startTime)}
+                </div>
+                <div>
+                  <strong>วันที่สิ้นสุด:</strong>{" "}
+                  {formatDate(formData.endDate + "T" + formData.endTime)}
+                </div>
               </div>
             </div>
           </div>
