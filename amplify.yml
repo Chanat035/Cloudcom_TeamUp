@@ -4,13 +4,16 @@ applications:
       phases:
         preBuild:
           commands:
-            - echo ">>> ROOT PWD: $(pwd)"
-            - echo ">>> ROOT LS:" && ls -la
-            - cd teamup_front && echo ">>> IN teamup_front: $(pwd)" && ls -la
-            - cd teamup_front && npm ci --prefer-offline --no-audit --silent
+            - "echo 'ROOT PWD:'"
+            - "pwd"
+            - "echo 'Listing root:'"
+            - "ls -la"
+            - "cd teamup_front && echo 'IN teamup_front:' && pwd && echo 'Listing teamup_front:' && ls -la"
+            - "cd teamup_front && npm ci --prefer-offline --no-audit --silent"
         build:
           commands:
-            - cd teamup_front && echo ">>> BUILD PWD: $(pwd)" && npm run build
+            - "cd teamup_front && echo 'BUILD PWD:' && pwd"
+            - "cd teamup_front && npm run build"
       artifacts:
         baseDirectory: teamup_front/.next
         files:
