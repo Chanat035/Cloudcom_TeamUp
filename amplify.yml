@@ -1,6 +1,6 @@
 version: 1
 applications:
-  - appRoot: "teamup-frontend"   # <-- ใส่ชื่อโฟลเดอร์จริงที่พบจากข้อ 1
+  - appRoot: "teamup_front"   # <-- ใส่ชื่อโฟลเดอร์จริงที่พบจากข้อ 1
     frontend:
       phases:
         preBuild:
