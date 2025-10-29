@@ -1,6 +1,6 @@
 version: 1
 applications:
-  - frontend:
+  - teamup_front:
       phases:
         preBuild:
           commands:
