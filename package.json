@@ -10,7 +10,10 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run start -w teamup_back",
-    "dev:frontend": "npm run dev -w teamup_front"
+    "dev:frontend": "npm run dev -w teamup_front",
+    "build:frontend": "npm --workspace=teamup_front run build",
+    "build:backend": "npm --workspace=teamup_back run build || echo 'no backend build script'",
+    "build": "npm run build:frontend"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"
