@@ -991,31 +991,48 @@ app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
 
 // ✅ ดึงผู้เข้าร่วมกิจกรรม
 app.get("/api/activity/:id/participants", checkAuth, async (req, res) => {
+  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+
   const activityId = req.params.id;
 
   try {
     const result = await pool.query(
-      `
-      SELECT user_id, status, role
-      FROM activity_participant
-      WHERE activity_id = $1
-      ORDER BY role DESC, status ASC
-      `,
+      `SELECT user_id, status, role FROM activity_participant WHERE activity_id = $1 ORDER BY role DESC, status ASC`,
       [activityId]
     );
 
-    // ใช้ชื่อจาก session (เฉพาะผู้ใช้ที่ล็อกอินอยู่ตอนนี้)
-    const currentUserId = req.session.userInfo.sub;
+    const currentUserId = req.session.userInfo?.sub;
     const currentUserName =
-      req.session.userInfo.name ||
-      req.session.userInfo.given_name ||
-      req.session.userInfo.preferred_username ||
+      req.session.userInfo?.name ||
+      req.session.userInfo?.given_name ||
+      req.session.userInfo?.preferred_username ||
       "Unknown";
 
-    // map ชื่อจาก session ให้เฉพาะ user ปัจจุบัน
-    const participants = result.rows.map((row) => ({
+    const uniqueUserIds = Array.from(new Set(result.rows.map(r => r.user_id).filter(Boolean)));
+
+    const nameMap = {};
+
+    // ดึงชื่อจาก Cognito แบบขนาน (ระวัง rate limit)
+    await Promise.all(uniqueUserIds.map(async uid => {
+      try {
+        const resp = await cognitoClient.send(new AdminGetUserCommand({
+          UserPoolId: process.env.COGNITO_USER_POOL_ID,
+          Username: uid
+        }));
+        const attrs = resp.UserAttributes || [];
+        const nameAttr = attrs.find(a => a.Name === "name") ||
+                         attrs.find(a => a.Name === "given_name") ||
+                         attrs.find(a => a.Name === "preferred_username");
+        nameMap[uid] = nameAttr ? nameAttr.Value : "Unknown User";
+      } catch (err) {
+        console.warn(`Cognito fetch failed for ${uid}:`, err.message || err);
+        nameMap[uid] = "Unknown User";
+      }
+    }));
+
+    const participants = result.rows.map(row => ({
       ...row,
-      name: row.user_id === currentUserId ? currentUserName : "Unknown User",
+      name: row.user_id === currentUserId ? currentUserName : (nameMap[row.user_id] || "Unknown User")
     }));
 
     res.json(participants);
