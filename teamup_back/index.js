@@ -20,7 +20,9 @@ import {
   AdminUpdateUserAttributesCommand,
   CognitoIdentityProviderClient,
   AdminSetUserPasswordCommand,
+  AdminInitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import crypto from "crypto";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -231,6 +233,61 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
   });
 });
+
+// ใช้ key จาก environment
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "default_32_byte_key_123456789012"; 
+const IV_LENGTH = 16; // สำหรับ AES-CBC ต้องใช้ IV ยาว 16 bytes
+
+// เข้ารหัสข้อความ
+function encryptText(plainText) {
+  const iv = crypto.randomBytes(IV_LENGTH); // สร้างค่าเริ่มต้นแบบสุ่ม
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let encrypted = cipher.update(plainText, "utf8", "base64");
+  encrypted += cipher.final("base64");
+  // รวม iv + ciphertext เป็น string เดียว
+  return iv.toString("base64") + ":" + encrypted;
+}
+
+// ถอดรหัสข้อความ
+function decryptText(encryptedText) {
+  const [ivBase64, encryptedData] = encryptedText.split(":");
+  const iv = Buffer.from(ivBase64, "base64");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let decrypted = decipher.update(encryptedData, "base64", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+}
+
+function computeSecretHash(username) {
+  if (!process.env.COGNITO_CLIENT_SECRET || !process.env.COGNITO_CLIENT_ID) return undefined;
+  const hmac = crypto.createHmac("sha256", process.env.COGNITO_CLIENT_SECRET);
+  hmac.update(username + process.env.COGNITO_CLIENT_ID);
+  return hmac.digest("base64");
+}
+
+async function verifyUserPassword(username, password) {
+  try {
+    const params = {
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
+      ClientId: process.env.COGNITO_CLIENT_ID,
+      AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password,
+      },
+    };
+
+    const secretHash = computeSecretHash(username);
+    if (secretHash) params.AuthParameters.SECRET_HASH = secretHash;
+
+    const result = await cognitoClient.send(new AdminInitiateAuthCommand(params));
+    // ถ้าไม่มี error ถือว่า auth ผ่าน (จะได้ ChallengeName หรือ AuthenticationResult)
+    return { ok: true, result };
+  } catch (err) {
+    console.warn("verifyUserPassword failed:", err);
+    return { ok: false, error: err };
+  }
+}
 
 app.get("/", checkAuth, (req, res) => {
   res.redirect("http://localhost:3000");
@@ -680,13 +737,19 @@ app.post("/api/settings/changeInterests", checkAuth, async (req, res) => {
 
 // ✅ เปลี่ยนชื่อ
 app.post("/api/settings/changeName", checkAuth, async (req, res) => {
-  if (!req.isAuthenticated)
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
 
-  const userId = req.session.userInfo.sub; // Cognito user id
-  const { newName } = req.body;
+  const userId = req.session.userInfo.sub; // Cognito user id (USERNAME)
+  const { newName, password } = req.body;
 
   if (!newName) return res.status(400).json({ error: "Name required" });
+  if (!password) return res.status(400).json({ error: "Current password required to confirm" });
+
+  // ตรวจสอบ password ว่าใช่ของ user นี้จริง
+  const verify = await verifyUserPassword(userId, password);
+  if (!verify.ok) {
+    return res.status(403).json({ error: "Invalid password" });
+  }
 
   try {
     await cognitoClient.send(
@@ -697,7 +760,11 @@ app.post("/api/settings/changeName", checkAuth, async (req, res) => {
       })
     );
 
-    req.session.userInfo.name = newName;
+    // อัปเดต session copy ถ้ามี
+    if (req.session && req.session.userInfo) {
+      req.session.userInfo.name = newName;
+    }
+
     res.json({ success: true, name: newName });
   } catch (err) {
     console.error("Error updating name:", err);
@@ -707,14 +774,22 @@ app.post("/api/settings/changeName", checkAuth, async (req, res) => {
 
 // ✅ เปลี่ยนรหัสผ่าน
 app.post("/api/settings/changePassword", checkAuth, async (req, res) => {
-  if (!req.isAuthenticated)
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
 
   const userId = req.session.userInfo.sub;
-  const { newPassword } = req.body;
+  const { oldPassword, newPassword, confirmPassword } = req.body;
 
-  if (!newPassword) {
-    return res.status(400).json({ error: "New password required" });
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    return res.status(400).json({ error: "oldPassword, newPassword and confirmPassword are required" });
+  }
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: "New password and confirmation do not match" });
+  }
+
+  // ตรวจสอบความถูกต้องของรหัสเก่า
+  const verify = await verifyUserPassword(userId, oldPassword);
+  if (!verify.ok) {
+    return res.status(403).json({ error: "Invalid current password" });
   }
 
   try {
@@ -723,7 +798,7 @@ app.post("/api/settings/changePassword", checkAuth, async (req, res) => {
         UserPoolId: process.env.COGNITO_USER_POOL_ID,
         Username: userId,
         Password: newPassword,
-        Permanent: true, // ให้ใช้ password นี้ถาวร
+        Permanent: true,
       })
     );
 
@@ -806,17 +881,35 @@ app.get("/api/getActivityImage/:id", async (req, res) => {
 app.get("/api/activity/:id/messages", checkAuth, async (req, res) => {
   if (!req.isAuthenticated)
     return res.status(401).json({ error: "Unauthorized" });
-  const activityId = req.params.id;
-  const result = await pool.query(
-    `SELECT id, activity_id, user_id, user_name, message, created_at
-     FROM chat_message
-     WHERE activity_id = $1
-     ORDER BY created_at ASC`,
-    [activityId]
-  );
 
-  res.json(result.rows);
+  const activityId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT id, activity_id, user_id, user_name, message, created_at
+       FROM chat_message
+       WHERE activity_id = $1
+       ORDER BY created_at ASC`,
+      [activityId]
+    );
+
+    // 🧠 ถอดรหัสก่อนส่ง
+    const decryptedRows = result.rows.map((row) => {
+      try {
+        return { ...row, message: decryptText(row.message) };
+      } catch (err) {
+        console.warn("Failed to decrypt message id", row.id);
+        return { ...row, message: "[Unable to decrypt message]" };
+      }
+    });
+
+    res.json(decryptedRows);
+  } catch (err) {
+    console.error("Error fetching messages:", err);
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
 });
+
 
 app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
   if (!req.isAuthenticated)
@@ -824,13 +917,10 @@ app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
 
   const activityId = req.params.id;
   const userId = req.session.userInfo.sub;
-
-  // Map name จาก session
   const userName =
     req.session.userInfo.name ||
     req.session.userInfo.given_name ||
     req.session.userInfo.preferred_username ||
-    req.session.userInfo["cognito:username"] ||
     "Unknown";
 
   const { message } = req.body;
@@ -839,15 +929,26 @@ app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
     return res.status(400).json({ error: "Message required" });
   }
 
-  const result = await pool.query(
-    `INSERT INTO chat_message (activity_id, user_id, user_name, message)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [activityId, userId, userName, message]
-  );
+  try {
+    const encrypted = encryptText(message); // 🧠 เข้ารหัสก่อนบันทึก
+    const result = await pool.query(
+      `INSERT INTO chat_message (activity_id, user_id, user_name, message)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [activityId, userId, userName, encrypted]
+    );
 
-  res.status(201).json(result.rows[0]);
+    // ส่งข้อความที่ถอดรหัสแล้วกลับให้ frontend เห็น
+    const saved = result.rows[0];
+    saved.message = message;
+
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error("Error saving message:", err);
+    res.status(500).json({ error: "Failed to save message" });
+  }
 });
+
 
 // ✅ อัปเดตกิจกรรม
 app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
@@ -909,8 +1010,9 @@ app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
 
 
 // ✅ ดึงผู้เข้าร่วมกิจกรรม
-app.get("/api/activity/:id/participants", async (req, res) => {
+app.get("/api/activity/:id/participants", checkAuth, async (req, res) => {
   const activityId = req.params.id;
+
   try {
     const result = await pool.query(
       `
@@ -922,32 +1024,19 @@ app.get("/api/activity/:id/participants", async (req, res) => {
       [activityId]
     );
 
-    const participants = await Promise.all(
-      result.rows.map(async (row) => {
-        try {
-          const cognitoRes = await cognitoClient.send(
-            new AdminGetUserCommand({
-              UserPoolId: process.env.COGNITO_USER_POOL_ID,
-              Username: row.user_id,
-            })
-          );
+    // ใช้ชื่อจาก session (เฉพาะผู้ใช้ที่ล็อกอินอยู่ตอนนี้)
+    const currentUserId = req.session.userInfo.sub;
+    const currentUserName =
+      req.session.userInfo.name ||
+      req.session.userInfo.given_name ||
+      req.session.userInfo.preferred_username ||
+      "Unknown";
 
-          // ✅ ใช้ name ก่อน ถ้าไม่มี ใช้ email, สุดท้าย fallback เป็น user_id
-          const name =
-            cognitoRes.UserAttributes.find((a) => a.Name === "name")?.Value ||
-            cognitoRes.UserAttributes.find((a) => a.Name === "email")?.Value ||
-            row.user_id;
-
-          return {
-            ...row,
-            name,
-          };
-        } catch (err) {
-          console.error("Error fetching Cognito user:", err);
-          return { ...row, name: row.user_id };
-        }
-      })
-    );
+    // map ชื่อจาก session ให้เฉพาะ user ปัจจุบัน
+    const participants = result.rows.map((row) => ({
+      ...row,
+      name: row.user_id === currentUserId ? currentUserName : "Unknown User",
+    }));
 
     res.json(participants);
   } catch (err) {
@@ -955,6 +1044,7 @@ app.get("/api/activity/:id/participants", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch participants" });
   }
 });
+
 
 // ✅ อัปเดตสถานะหรือบทบาทของผู้เข้าร่วม
 app.put("/api/activity/:id/participants/:userId", async (req, res) => {

@@ -18,8 +18,11 @@ const ProfilePage = () => {
   const [showInterestModal, setShowInterestModal] = useState(false);
 
   const [newName, setNewName] = useState("");
+  const [namePassword, setNamePassword] = useState("");
+
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // 🆕 state สำหรับ interests
   const [interests, setInterests] = useState([]);
@@ -125,13 +128,14 @@ const ProfilePage = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ newName }),
+        body: JSON.stringify({ newName, password: namePassword }),
       });
       const data = await res.json();
       if (res.ok) {
         alert("อัปเดตชื่อสำเร็จ!");
         setShowNameModal(false);
         setNewName("");
+        setNamePassword("");
       } else {
         alert(data.error || "Update name failed");
       }
@@ -141,6 +145,30 @@ const ProfilePage = () => {
   };
 
   const handleChangePassword = async () => {
+    // ✅ ตรวจสอบความยาว
+    if (newPassword.length < 8) {
+      alert("Password must be at least 8 characters");
+      return;
+    }
+
+    // ✅ ตรวจสอบเงื่อนไข
+    const hasNumber = /\d/.test(newPassword);
+    const hasLower = /[a-z]/.test(newPassword);
+    const hasUpper = /[A-Z]/.test(newPassword);
+    const hasSymbol = /[^A-Za-z0-9]/.test(newPassword);
+
+    if (!hasNumber || !hasLower || !hasUpper || !hasSymbol) {
+      alert(
+        "Password must include:\n- A number\n- A lowercase letter\n- An uppercase letter\n- A symbol"
+      );
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("New password and confirmation do not match");
+      return;
+    }
+
     try {
       const res = await fetch(
         "http://localhost:3100/api/settings/changePassword",
@@ -148,7 +176,7 @@ const ProfilePage = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ oldPassword, newPassword }),
+          body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
         }
       );
       const data = await res.json();
@@ -157,6 +185,7 @@ const ProfilePage = () => {
         setShowPasswordModal(false);
         setOldPassword("");
         setNewPassword("");
+        setConfirmPassword("");
       } else {
         alert(data.error || "Change password failed");
       }
@@ -342,6 +371,13 @@ const ProfilePage = () => {
               onChange={(e) => setNewName(e.target.value)}
               className="border p-2 rounded w-full mb-4 text-black"
             />
+            <input
+              type="password"
+              placeholder="Password"
+              value={namePassword}
+              onChange={(e) => setNamePassword(e.target.value)}
+              className="border p-2 rounded w-full mb-4 text-black"
+            />
             <button
               onClick={handleChangeName}
               className="px-4 py-2 bg-blue-500 text-white rounded w-full"
@@ -379,6 +415,23 @@ const ProfilePage = () => {
               onChange={(e) => setNewPassword(e.target.value)}
               className="border p-2 rounded w-full mb-4 text-black"
             />
+            <input
+              type="password"
+              placeholder="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="border p-2 rounded w-full mb-4 text-black"
+            />
+            <p className="text-sm text-gray-600 mb-4 text-left">
+              Password must be at least 8 characters
+              <br />
+              • Use a number
+              <br />
+              • Use a lowercase letter
+              <br />
+              • Use an uppercase letter
+              <br />• Use a symbol
+            </p>
             <button
               onClick={handleChangePassword}
               className="px-4 py-2 bg-green-500 text-white rounded w-full"
