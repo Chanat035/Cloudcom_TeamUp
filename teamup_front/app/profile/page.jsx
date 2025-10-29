@@ -4,6 +4,8 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 
 const ProfilePage = () => {
   const [myGroups, setMyGroups] = useState([]);
@@ -35,29 +37,29 @@ const ProfilePage = () => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/status", {
+      const response = await fetch(`${API_URL}/api/auth/status`, {
         credentials: "include",
       });
       if (response.ok) {
         const data = await response.json();
         if (!data.isAuthenticated) {
-          window.location.href = "http://localhost:3100/login";
+          window.location.href = `${API_URL}/login`;
           return;
         }
         setIsAuthenticated(true);
         fetchMyGroups();
       } else {
-        window.location.href = "http://localhost:3100/login";
+        window.location.href = `${API_URL}/login`;
       }
     } catch (error) {
       console.error("Error checking auth status:", error);
-      window.location.href = "http://localhost:3100/login";
+      window.location.href = `${API_URL}/login`;
     }
   };
 
   const fetchMyGroups = async () => {
     try {
-      const res = await fetch("http://localhost:3100/api/myGroups", {
+      const res = await fetch(`${API_URL}/api/myGroups`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -73,10 +75,10 @@ const ProfilePage = () => {
   const fetchProfile = async () => {
     try {
       const [imgRes, intRes] = await Promise.all([
-        fetch("http://localhost:3100/api/getProfile", {
+        fetch(`${API_URL}/api/getProfile`, {
           credentials: "include",
         }),
-        fetch("http://localhost:3100/api/settings/getInterests", {
+        fetch(`${API_URL}/api/settings/getInterests`, {
           credentials: "include",
         }),
       ]);
@@ -102,7 +104,7 @@ const ProfilePage = () => {
     const fd = new FormData();
     fd.append("profileImage", file);
     try {
-      const res = await fetch("http://localhost:3100/api/uploadProfile", {
+      const res = await fetch(`${API_URL}/api/uploadProfile`, {
         method: "POST",
         body: fd,
         credentials: "include",
@@ -124,7 +126,7 @@ const ProfilePage = () => {
 
   const handleChangeName = async () => {
     try {
-      const res = await fetch("http://localhost:3100/api/settings/changeName", {
+      const res = await fetch(`${API_URL}/api/settings/changeName`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -171,7 +173,7 @@ const ProfilePage = () => {
 
     try {
       const res = await fetch(
-        "http://localhost:3100/api/settings/changePassword",
+        `${API_URL}/api/settings/changePassword`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -490,7 +492,7 @@ const ProfilePage = () => {
             <button
               onClick={async () => {
                 const res = await fetch(
-                  "http://localhost:3100/api/settings/changeInterests",
+                  "${API_URL}/api/settings/changeInterests",
                   {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

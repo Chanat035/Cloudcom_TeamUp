@@ -1,8 +1,10 @@
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 export async function POST(request) {
   try {
     const data = await request.json();
 
-    const response = await fetch("http://localhost:3100/api/createActivity", {
+    const response = await fetch(`${API_URL}/api/createActivity`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

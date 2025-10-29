@@ -12,6 +12,8 @@ import {
   FileText,
   Tag,
 } from "lucide-react";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 
 const EventDetail = () => {
   const params = useParams();
@@ -26,25 +28,25 @@ const EventDetail = () => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/status", {
+      const response = await fetch(`${API_URL}/api/auth/status`, {
         credentials: "include",
       });
       const data = await response.json();
 
       if (!data.isAuthenticated) {
-        window.location.href = "http://localhost:3100/login";
+        window.location.href = `${API_URL}/login`;
         return;
       }
       setUserInfo(data.userInfo);
     } catch (error) {
       console.error("Auth check failed:", error);
-      window.location.href = "http://localhost:3100/login";
+      window.location.href = `${API_URL}/login`;
     }
   };
 
   const fetchEvent = async () => {
     try {
-      const res = await fetch(`http://localhost:3100/api/eventDetail/${id}`, {
+      const res = await fetch(`${API_URL}/api/eventDetail/${id}`, {
         cache: "no-store",
       });
       if (!res.ok) throw new Error("Failed to fetch event");
@@ -60,7 +62,7 @@ const EventDetail = () => {
   const fetchActivityImage = async () => {
     try {
       const res = await fetch(
-        `http://localhost:3100/api/getActivityImage/${id}`
+        `${API_URL}/api/getActivityImage/${id}`
       );
       const data = await res.json();
       setActivityImageUrl(data.imageUrl);
@@ -73,7 +75,7 @@ const EventDetail = () => {
     if (!id || !userInfo) return;
     try {
       const res = await fetch(
-        `http://localhost:3100/api/eventDetail/${id}/checkParticipant`,
+        `${API_URL}/api/eventDetail/${id}/checkParticipant`,
         { credentials: "include" }
       );
       if (!res.ok) return;
@@ -104,7 +106,7 @@ const EventDetail = () => {
   const handleJoin = async () => {
     try {
       const res = await fetch(
-        `http://localhost:3100/api/eventDetail/${id}/join`,
+        `${API_URL}/api/eventDetail/${id}/join`,
         {
           method: "POST",
           credentials: "include",

@@ -12,6 +12,8 @@ import {
   ChevronRight,
   CalendarDays,
 } from "lucide-react";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 
 const EventsCalendar = () => {
   const [eventsDatabase, setEventsDatabase] = useState({});
@@ -42,20 +44,20 @@ const EventsCalendar = () => {
   useEffect(() => {
     const checkAuthAndFetchEvents = async () => {
       try {
-        const authRes = await fetch("http://localhost:3100/api/auth/status", {
+        const authRes = await fetch(`${API_URL}:3100/api/auth/status`, {
           credentials: "include",
         });
         const authData = await authRes.json();
 
         if (!authData.isAuthenticated) {
-          window.location.href = "http://localhost:3100/login";
+          window.location.href = `${API_URL}:3100/login`;
           return;
         }
 
         setAuthChecked(true);
 
         // Fetch events
-        const res = await fetch("http://localhost:3100/api/eventSchedule", {
+        const res = await fetch(`${API_URL}:3100/api/eventSchedule`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -91,7 +93,7 @@ const EventsCalendar = () => {
         setEventsDatabase(grouped);
       } catch (err) {
         console.error("Auth check or fetch failed:", err);
-        window.location.href = "http://localhost:3100/login";
+        window.location.href = `${API_URL}:3100/login`;
       }
     };
 

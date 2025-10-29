@@ -1,7 +1,9 @@
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 export async function POST(request) {
   try {
     // เรียก API จาก backend เพื่อ logout
-    const response = await fetch("http://localhost:3100/api/auth/logout", {
+    const response = await fetch(`${API_URL}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: {

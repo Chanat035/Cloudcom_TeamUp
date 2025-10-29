@@ -1,23 +1,18 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const router = useRouter();
 
-  const cognitoDomain =
-    "https://ap-southeast-2zbxn28ian.auth.ap-southeast-2.amazoncognito.com";
-  const clientId = "2sqjfuh2t12b1djlpnbjq9beba";
-  const redirectUri = "http://localhost:3100/callback";
   const responseType = "code";
   const scope = "profile openid email";
 
-  const loginUrl = `${cognitoDomain}/login?client_id=${clientId}&response_type=${responseType}&scope=${scope}&redirect_uri=${redirectUri}`;
+  const loginUrl = `${COGNITO_DOMAIN}/login?client_id=${COGNITO_CLIENT_ID}&response_type=${responseType}&scope=${scope}&redirect_uri=${OAUTH_REDIRECT_URI}`;
 
   useEffect(() => {
     checkAuthStatus();
@@ -25,7 +20,7 @@ export default function Home() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/status", {
+      const response = await fetch(`${API_URL}/api/auth/status`, {
         credentials: "include",
       });
       if (response.ok) {
@@ -47,7 +42,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/logout", {
+      const response = await fetch(`${API_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });

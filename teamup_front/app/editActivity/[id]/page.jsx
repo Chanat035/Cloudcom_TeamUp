@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
 
 export default function EditActivityPage() {
   const { id } = useParams();
@@ -74,27 +75,27 @@ export default function EditActivityPage() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/status", {
+      const response = await fetch(`${API_URL}/api/auth/status`, {
         credentials: "include",
       });
       const data = await response.json();
 
       if (!data.isAuthenticated) {
-        window.location.href = "http://localhost:3100/login";
+        window.location.href = `${API_URL}/login`;
         return;
       }
 
       setUserInfo(data.userInfo);
     } catch (error) {
       console.error("Auth check failed:", error);
-      window.location.href = "http://localhost:3100/login";
+      window.location.href = `${API_URL}/login`;
     }
   };
 
   const fetchActivityData = async (activityId) => {
     try {
       const res = await fetch(
-        `http://localhost:3100/api/eventDetail/${activityId}`
+        `${API_URL}/api/eventDetail/${activityId}`
       );
       if (!res.ok) throw new Error("Failed to load activity data");
       const data = await res.json();
@@ -125,7 +126,7 @@ export default function EditActivityPage() {
     try {
       setIsLoadingParticipants(true);
       const res = await fetch(
-        `http://localhost:3100/api/activity/${activityId}/participants`,
+        `${API_URL}/api/activity/${activityId}/participants`,
         { credentials: "include" }
       );
       if (!res.ok) throw new Error("Failed to load participants");
@@ -147,7 +148,7 @@ export default function EditActivityPage() {
       };
 
       const res = await fetch(
-        `http://localhost:3100/api/activity/${id}/participants/${userId}`,
+        `${API_URL}/api/activity/${id}/participants/${userId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -247,7 +248,7 @@ export default function EditActivityPage() {
       };
 
       const updateResponse = await fetch(
-        `http://localhost:3100/api/editActivity/${id}`,
+        `${API_URL}/api/editActivity/${id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -266,7 +267,7 @@ export default function EditActivityPage() {
         const imageFormData = new FormData();
         imageFormData.append("activityImage", activityImage);
 
-        await fetch(`http://localhost:3100/api/uploadActivityImage/${id}`, {
+        await fetch(`${API_URL}/api/uploadActivityImage/${id}`, {
           method: "POST",
           body: imageFormData,
           credentials: "include",
@@ -308,7 +309,7 @@ export default function EditActivityPage() {
           <span className="text-sm text-gray-600">
             ผู้ใช้: {userInfo.name || "ไม่ระบุ"} |
             <a
-              href="http://localhost:3100/logout"
+              href="${API_URL}/logout"
               className="ml-2 text-blue-600 hover:underline"
             >
               ออกจากระบบ

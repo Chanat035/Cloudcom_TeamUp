@@ -6,6 +6,7 @@ import React, { useState, useEffect } from "react";
 import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
 
 export default function CreateActivityPage() {
   const [formData, setFormData] = useState({
@@ -44,20 +45,20 @@ export default function CreateActivityPage() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/status", {
+      const response = await fetch(`${API_URL}/api/auth/status`, {
         credentials: "include",
       });
       const data = await response.json();
 
       if (!data.isAuthenticated) {
-        window.location.href = "http://localhost:3100/login";
+        window.location.href = `${API_URL}/login`;
         return;
       }
 
       setUserInfo(data.userInfo);
     } catch (error) {
       console.error("Auth check failed:", error);
-      window.location.href = "http://localhost:3100/login";
+      window.location.href = `${API_URL}/login`;
     }
   };
 
@@ -141,7 +142,7 @@ export default function CreateActivityPage() {
       };
 
       const createActivityResponse = await fetch(
-        "http://localhost:3100/api/createActivity",
+        `${API_URL}/api/createActivity`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -163,7 +164,7 @@ export default function CreateActivityPage() {
         imageFormData.append("activityImage", activityImage);
 
         const uploadResponse = await fetch(
-          `http://localhost:3100/api/uploadActivityImage/${activityId}`,
+          `${API_URL}/api/uploadActivityImage/${activityId}`,
           {
             method: "POST",
             body: imageFormData,
@@ -240,7 +241,7 @@ export default function CreateActivityPage() {
           <span className="text-sm text-gray-600">
             ผู้ใช้: {userInfo.name || "ไม่ระบุ"} |
             <a
-              href="http://localhost:3100/logout"
+              href={`${API_URL}/logout`}
               className="ml-2 text-blue-600 hover:underline"
             >
               ออกจากระบบ

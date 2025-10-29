@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 
 export default function LoginPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -16,7 +18,7 @@ export default function LoginPage() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/status", {
+      const response = await fetch(`${API_URL}/api/auth/status`, {
         credentials: "include",
       });
 
@@ -36,12 +38,12 @@ export default function LoginPage() {
   };
 
   const handleLogin = () => {
-    window.location.href = "http://localhost:3100/login";
+    window.location.href = `${API_URL}/login`;
   };
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:3100/api/auth/logout", {
+      const response = await fetch(`${API_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });

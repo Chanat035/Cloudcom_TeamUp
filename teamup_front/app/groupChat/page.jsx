@@ -2,6 +2,8 @@
 
 "use client";
 import { useState, useEffect } from "react";
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 
 export default function GroupChatPage() {
   const [groups, setGroups] = useState([]);
@@ -9,10 +11,35 @@ export default function GroupChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  
+
+  useEffect(() => {
+      checkAuthStatus();
+    }, []);
+  
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/status`, {
+          credentials: "include",
+        });
+        const data = await response.json();
+  
+        if (!data.isAuthenticated) {
+          window.location.href = `${API_URL}/login`;
+          return;
+        }
+  
+        setUserInfo(data.userInfo);
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = `${API_URL}/login`;
+      }
+    };
 
   // โหลด user ปัจจุบัน
   useEffect(() => {
-    fetch("http://localhost:3100/api/auth/status", { credentials: "include" })
+    fetch(`${API_URL}/api/auth/status`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         if (data.isAuthenticated) setCurrentUser(data.userInfo);
@@ -21,7 +48,7 @@ export default function GroupChatPage() {
 
   // โหลดกลุ่มที่ joined แล้ว
   useEffect(() => {
-    fetch("http://localhost:3100/api/myGroups/chat", { credentials: "include" })
+    fetch(`${API_URL}/api/myGroups/chat`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -34,7 +61,7 @@ export default function GroupChatPage() {
   // โหลดข้อความ
   useEffect(() => {
     if (!activeGroup) return;
-    fetch(`http://localhost:3100/api/activity/${activeGroup.id}/messages`, { credentials: "include" })
+    fetch(`${API_URL}/api/activity/${activeGroup.id}/messages`, { credentials: "include" })
       .then(res => res.json())
       .then(data => setMessages(Array.isArray(data) ? data : []));
   }, [activeGroup]);
@@ -42,7 +69,7 @@ export default function GroupChatPage() {
   const handleSend = async () => {
     if (!input.trim() || !activeGroup) return;
 
-    await fetch(`http://localhost:3100/api/activity/${activeGroup.id}/messages`, {
+    await fetch(`${API_URL}/api/activity/${activeGroup.id}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -51,7 +78,7 @@ export default function GroupChatPage() {
 
     setInput("");
 
-    fetch(`http://localhost:3100/api/activity/${activeGroup.id}/messages`, { credentials: "include" })
+    fetch(`${API_URL}/api/activity/${activeGroup.id}/messages`, { credentials: "include" })
       .then(res => res.json())
       .then(data => setMessages(Array.isArray(data) ? data : []));
   };

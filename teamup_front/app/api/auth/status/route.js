@@ -1,7 +1,9 @@
+import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+
 export async function GET(request) {
   try {
     // เรียก API จาก backend เพื่อตรวจสอบสถานะ authentication
-    const response = await fetch("http://localhost:3100/api/auth/status", {
+    const response = await fetch(`${API_URL}/api/auth/status`, {
       credentials: "include",
       headers: {
         Cookie: request.headers.get("cookie") || "",
