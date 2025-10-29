@@ -44,20 +44,20 @@ const EventsCalendar = () => {
   useEffect(() => {
     const checkAuthAndFetchEvents = async () => {
       try {
-        const authRes = await fetch(`${API_URL}:3100/api/auth/status`, {
+        const authRes = await fetch(`${API_URL}/api/auth/status`, {
           credentials: "include",
         });
         const authData = await authRes.json();
 
         if (!authData.isAuthenticated) {
-          window.location.href = `${API_URL}:3100/login`;
+          window.location.href = `${API_URL}/login`;
           return;
         }
 
         setAuthChecked(true);
 
         // Fetch events
-        const res = await fetch(`${API_URL}:3100/api/eventSchedule`, {
+        const res = await fetch(`${API_URL}/api/eventSchedule`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -93,7 +93,7 @@ const EventsCalendar = () => {
         setEventsDatabase(grouped);
       } catch (err) {
         console.error("Auth check or fetch failed:", err);
-        window.location.href = `${API_URL}:3100/login`;
+        window.location.href = `${API_URL}/login`;
       }
     };
 
