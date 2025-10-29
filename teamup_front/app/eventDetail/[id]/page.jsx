@@ -135,7 +135,7 @@ const EventDetail = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:3100/api/eventDetail/${id}/cancel`,
+        `${API_URL}/api/eventDetail/${id}/cancel`,
         {
           method: "PUT",
           credentials: "include",

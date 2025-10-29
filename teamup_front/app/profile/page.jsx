@@ -492,7 +492,7 @@ const ProfilePage = () => {
             <button
               onClick={async () => {
                 const res = await fetch(
-                  "${API_URL}/api/settings/changeInterests",
+                  `${API_URL}/api/settings/changeInterests`,
                   {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
