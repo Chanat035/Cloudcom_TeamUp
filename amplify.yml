@@ -6,12 +6,10 @@ applications:
           commands:
             - nvm install 22
             - nvm use 22
-            - cd teamup_front
-            - npm ci
+            - npm ci --prefix teamup_front
         build:
           commands:
-            - cd teamup_front
-            - npm run build
+            - npm run build --prefix teamup_front
       artifacts:
         baseDirectory: teamup_front/.next
         files:
