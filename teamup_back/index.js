@@ -1,12 +1,9 @@
 import express from "express";
 import pkg from "pg";
 import dotenv from "dotenv";
-import fs from "fs";
 import cors from "cors";
 import session from "express-session";
 import { Issuer } from "openid-client";
-import { Client } from "ssh2";
-import net from "net";
 import multer from "multer";
 import {
   S3Client,
@@ -26,91 +23,27 @@ import crypto from "crypto";
 
 dotenv.config();
 const { Pool } = pkg;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
-// SSH configuration
-const sshConfig = {
-  host: process.env.SSH_HOST,
-  port: 22,
-  username: process.env.SSH_USER,
-  privateKey: fs.readFileSync(process.env.SSH_PRIVATE_KEY_PATH),
-};
+// ---------- Database ----------
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || "5432", 10),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  // ถ้า RDS ต้องการ SSL ให้เปิด หรือ false ถ้าไม่ได้ใช้
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+});
 
-// Create SSH tunnel then initialize pool
-async function initializeDatabase() {
-  return new Promise((resolve, reject) => {
-    const sshClient = new Client();
-
-    sshClient
-      .on("ready", () => {
-        console.log("SSH Connection established");
-
-        // สร้าง local TCP server
-        const server = net.createServer((localStream) => {
-          sshClient.forwardOut(
-            "127.0.0.1",
-            0,
-            process.env.DB_HOST,
-            parseInt(process.env.DB_PORT),
-            (err, remoteStream) => {
-              if (err) {
-                localStream.destroy();
-                reject(err);
-                return;
-              }
-              // pipe data ไปกลับ
-              localStream.pipe(remoteStream).pipe(localStream);
-            }
-          );
-        });
-
-        // listen ที่ localhost:5433
-        server.listen(5433, "127.0.0.1", async () => {
-          console.log("Local tunnel listening on 127.0.0.1:5433");
-
-          const pool = new Pool({
-            host: "127.0.0.1",
-            port: 5433,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASS,
-            database: process.env.DB_NAME,
-            ssl: { rejectUnauthorized: false },
-          });
-
-          try {
-            const client = await pool.connect();
-            console.log("Connected to DB through SSH tunnel");
-            const result = await client.query("SELECT NOW()");
-            console.log("Database time:", result.rows[0].now);
-            client.release();
-            resolve(pool);
-          } catch (err) {
-            reject(err);
-          }
-        });
-      })
-      .on("error", (err) => {
-        console.error("SSH Connection error:", err);
-        reject(err);
-      })
-      .connect(sshConfig);
-  });
-}
-
-// Initialize database connection with SSH tunnel
-let pool;
-initializeDatabase()
-  .then((p) => {
-    pool = p;
-    console.log("Database pool initialized");
-
-    pool.on("error", (err) => {
-      console.error("Unexpected error on idle client", err);
-      process.exit(-1);
-    });
+pool
+  .connect()
+  .then((client) => {
+    console.log("✅ Connected to RDS");
+    client.release();
   })
   .catch((err) => {
-    console.error("Failed to initialize database pool:", err);
-    process.exit(1);
+    console.error("❌ Failed to connect to RDS:", err);
   });
 
 const app = express();
@@ -123,19 +56,47 @@ const cognitoClient = new CognitoIdentityProviderClient({
   },
 });
 
+// ---------- CORS ----------
+const defaultOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:3100"],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (defaultOrigins.indexOf(origin) !== -1) return callback(null, true);
+      callback(new Error("CORS policy: This origin is not allowed: " + origin));
+    },
     credentials: true,
   })
 );
 
+const allowedOrigins = defaultOrigins; // reuse the same list for socket.io
+
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3100"],
+    origin: allowedOrigins,
     credentials: true,
   },
 });
+
+// ---------- Session ----------
+app.set("trust proxy", 1); // if behind nginx / load balancer
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // ต้องเป็น true บน HTTPS
+      sameSite: "none", // ถ้าต้องการส่ง cookie ข้ามโดเมน (frontend != backend)
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days ตัวอย่าง
+    },
+  })
+);
 
 app.use(express.json());
 
@@ -143,24 +104,19 @@ let client;
 // Initialize OpenID Client
 async function initializeClient() {
   const issuer = await Issuer.discover(
-    "https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_zbXn28iAN"
+    process.env.COGNITO_ISSUER_URL ||
+      "https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_zbXn28iAN"
   );
   client = new issuer.Client({
-    client_id: "2sqjfuh2t12b1djlpnbjq9beba",
-    client_secret: "sg64df35j17gb53n9hps1rt967m6lc4l5pid1kajbip8f0d70f0",
-    redirect_uris: ["http://localhost:3100/callback"],
+    client_id: process.env.COGNITO_CLIENT_ID,
+    client_secret: process.env.COGNITO_CLIENT_SECRET,
+    redirect_uris: [
+      process.env.OAUTH_REDIRECT_URI || "http://localhost:3100/callback",
+    ],
     response_types: ["code"],
   });
 }
 initializeClient().catch(console.error);
-
-app.use(
-  session({
-    secret: "L3VxwxeRG0",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
 
 const checkAuth = (req, res, next) => {
   if (!req.session.userInfo) {
@@ -173,20 +129,18 @@ const checkAuth = (req, res, next) => {
 
 app.get("/callback", async (req, res) => {
   const params = client.callbackParams(req);
-  const tokenSet = await client.callback(
-    "http://localhost:3100/callback",
-    params,
-    {
-      nonce: req.session.nonce,
-      state: req.session.state,
-    }
-  );
+  const callbackUrl =
+    process.env.OAUTH_REDIRECT_URI || "http://localhost:3100/callback";
+  const tokenSet = await client.callback(callbackUrl, params, {
+    nonce: req.session.nonce,
+    state: req.session.state,
+  });
   const userInfo = await client.userinfo(tokenSet.access_token);
 
   req.session.regenerate((err) => {
     if (err) {
       console.error(err);
-      return res.redirect("http://localhost:3000");
+      return res.redirect(FRONTEND_URL);
     }
 
     // 🆕 เก็บ userInfo + accessToken ลง session
@@ -197,7 +151,7 @@ app.get("/callback", async (req, res) => {
     };
 
     req.session.save(() => {
-      res.redirect("http://localhost:3000");
+      res.redirect(FRONTEND_URL);
     });
   });
 });
@@ -213,7 +167,6 @@ const s3 = new S3Client({
 const upload = multer({ storage: multer.memoryStorage() });
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
 
   socket.on("joinActivity", ({ activityId, userId }) => {
     socket.join(`activity_${activityId}`);
@@ -235,13 +188,18 @@ io.on("connection", (socket) => {
 });
 
 // ใช้ key จาก environment
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "default_32_byte_key_123456789012"; 
+const ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || "default_32_byte_key_123456789012";
 const IV_LENGTH = 16; // สำหรับ AES-CBC ต้องใช้ IV ยาว 16 bytes
 
 // เข้ารหัสข้อความ
 function encryptText(plainText) {
   const iv = crypto.randomBytes(IV_LENGTH); // สร้างค่าเริ่มต้นแบบสุ่ม
-  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  const cipher = crypto.createCipheriv(
+    "aes-256-cbc",
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
   let encrypted = cipher.update(plainText, "utf8", "base64");
   encrypted += cipher.final("base64");
   // รวม iv + ciphertext เป็น string เดียว
@@ -252,14 +210,19 @@ function encryptText(plainText) {
 function decryptText(encryptedText) {
   const [ivBase64, encryptedData] = encryptedText.split(":");
   const iv = Buffer.from(ivBase64, "base64");
-  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  const decipher = crypto.createDecipheriv(
+    "aes-256-cbc",
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
   let decrypted = decipher.update(encryptedData, "base64", "utf8");
   decrypted += decipher.final("utf8");
   return decrypted;
 }
 
 function computeSecretHash(username) {
-  if (!process.env.COGNITO_CLIENT_SECRET || !process.env.COGNITO_CLIENT_ID) return undefined;
+  if (!process.env.COGNITO_CLIENT_SECRET || !process.env.COGNITO_CLIENT_ID)
+    return undefined;
   const hmac = crypto.createHmac("sha256", process.env.COGNITO_CLIENT_SECRET);
   hmac.update(username + process.env.COGNITO_CLIENT_ID);
   return hmac.digest("base64");
@@ -280,7 +243,9 @@ async function verifyUserPassword(username, password) {
     const secretHash = computeSecretHash(username);
     if (secretHash) params.AuthParameters.SECRET_HASH = secretHash;
 
-    const result = await cognitoClient.send(new AdminInitiateAuthCommand(params));
+    const result = await cognitoClient.send(
+      new AdminInitiateAuthCommand(params)
+    );
     // ถ้าไม่มี error ถือว่า auth ผ่าน (จะได้ ChallengeName หรือ AuthenticationResult)
     return { ok: true, result };
   } catch (err) {
@@ -290,65 +255,24 @@ async function verifyUserPassword(username, password) {
 }
 
 app.get("/", checkAuth, (req, res) => {
-  res.redirect("http://localhost:3000");
-});
-
-app.get("/createActivity", checkAuth, (req, res) => {
-  if (!req.isAuthenticated) {
-    return res.redirect("/login");
-  }
-  // redirect ไปที่ frontend page
-  res.redirect("http://localhost:3000/createActivity");
-});
-
-app.get("/eventSchedule", checkAuth, (req, res) => {
-  if (!req.isAuthenticated) {
-    return res.redirect("/login");
-  }
-  // redirect ไปที่ frontend page
-  res.redirect("http://localhost:3000/eventSchedule");
-});
-
-app.get("/eventDetail/:id", checkAuth, (req, res) => {
-  if (!req.isAuthenticated) {
-    return res.redirect("/login");
-  }
-  // redirect ไปหน้า frontend ที่แสดงรายละเอียดกิจกรรม
-  res.redirect(`http://localhost:3000/eventDetail/${req.params.id}`);
-});
-
-app.get("/profile", checkAuth, (req, res) => {
-  if (!req.isAuthenticated) {
-    return res.redirect("/login");
-  }
-  // redirect ไปที่ profile page
-  res.redirect("http://localhost:3000/profile");
-});
-
-app.get("/groupChat", checkAuth, (req, res) => {
-  if (!req.isAuthenticated) {
-    return res.redirect("/login");
-  }
-  // redirect ไปที่ groupChat page
-  res.redirect("http://localhost:3000/groupChat");
+  res.redirect(FRONTEND_URL);
 });
 
 app.get("/login", (req, res) => {
-  const cognitoDomain =
-    "https://ap-southeast-2zbxn28ian.auth.ap-southeast-2.amazoncognito.com";
-  const clientId = "2sqjfuh2t12b1djlpnbjq9beba";
-  const redirectUri = "http://localhost:3100/callback";
+  const cognitoDomain = process.env.COGNITO_DOMAIN;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+  const redirectUri = process.env.OAUTH_REDIRECT_URI || `http://localhost:3100/callback`;
   const responseType = "code";
   const scope = "profile openid email";
 
-  const loginUrl = `${cognitoDomain}/login?client_id=${clientId}&response_type=${responseType}&scope=${scope}&redirect_uri=${redirectUri}`;
+  const loginUrl = `${cognitoDomain}/login?client_id=${clientId}&response_type=${responseType}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
   res.redirect(loginUrl);
 });
 
 app.get("/logout", (req, res) => {
   req.session.destroy();
-  const logoutUrl = `https://ap-southeast-2zbxn28ian.auth.ap-southeast-2.amazoncognito.com/logout?client_id=2sqjfuh2t12b1djlpnbjq9beba&logout_uri=http://localhost:3000`;
+  const logoutUrl = `${process.env.COGNITO_DOMAIN}/logout?client_id=${process.env.COGNITO_CLIENT_ID}&logout_uri=${FRONTEND_URL}`;
   res.redirect(logoutUrl);
 });
 
@@ -363,6 +287,47 @@ app.post("/api/auth/logout", (req, res) => {
   req.session.destroy();
   res.json({ success: true });
 });
+
+app.get("/createActivity", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect("/login");
+  }
+  // redirect ไปที่ frontend page
+  res.redirect(`${FRONTEND_URL}/createActivity`);
+});
+
+app.get("/eventSchedule", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect("/login");
+  }
+  // redirect ไปที่ frontend page
+  res.redirect(`${FRONTEND_URL}/eventSchedule`);
+});
+
+app.get("/eventDetail/:id", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect("/login");
+  }
+  // redirect ไปหน้า frontend ที่แสดงรายละเอียดกิจกรรม
+  res.redirect(`${FRONTEND_URL}/eventDetail/${req.params.id}`);
+});
+
+app.get("/profile", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect("/login");
+  }
+  // redirect ไปที่ profile page
+  res.redirect(`${FRONTEND_URL}/profile`);
+});
+
+app.get("/groupChat", checkAuth, (req, res) => {
+  if (!req.isAuthenticated) {
+    return res.redirect("/login");
+  }
+  // redirect ไปที่ groupChat page
+  res.redirect(`${FRONTEND_URL}/groupChat`);
+});
+
 
 app.get("/testdb", async (req, res) => {
   try {
@@ -737,13 +702,17 @@ app.post("/api/settings/changeInterests", checkAuth, async (req, res) => {
 
 // ✅ เปลี่ยนชื่อ
 app.post("/api/settings/changeName", checkAuth, async (req, res) => {
-  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
 
   const userId = req.session.userInfo.sub; // Cognito user id (USERNAME)
   const { newName, password } = req.body;
 
   if (!newName) return res.status(400).json({ error: "Name required" });
-  if (!password) return res.status(400).json({ error: "Current password required to confirm" });
+  if (!password)
+    return res
+      .status(400)
+      .json({ error: "Current password required to confirm" });
 
   // ตรวจสอบ password ว่าใช่ของ user นี้จริง
   const verify = await verifyUserPassword(userId, password);
@@ -774,16 +743,21 @@ app.post("/api/settings/changeName", checkAuth, async (req, res) => {
 
 // ✅ เปลี่ยนรหัสผ่าน
 app.post("/api/settings/changePassword", checkAuth, async (req, res) => {
-  if (!req.isAuthenticated) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.isAuthenticated)
+    return res.status(401).json({ error: "Unauthorized" });
 
   const userId = req.session.userInfo.sub;
   const { oldPassword, newPassword, confirmPassword } = req.body;
 
   if (!oldPassword || !newPassword || !confirmPassword) {
-    return res.status(400).json({ error: "oldPassword, newPassword and confirmPassword are required" });
+    return res.status(400).json({
+      error: "oldPassword, newPassword and confirmPassword are required",
+    });
   }
   if (newPassword !== confirmPassword) {
-    return res.status(400).json({ error: "New password and confirmation do not match" });
+    return res
+      .status(400)
+      .json({ error: "New password and confirmation do not match" });
   }
 
   // ตรวจสอบความถูกต้องของรหัสเก่า
@@ -910,7 +884,6 @@ app.get("/api/activity/:id/messages", checkAuth, async (req, res) => {
   }
 });
 
-
 app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
   if (!req.isAuthenticated)
     return res.status(401).json({ error: "Unauthorized" });
@@ -948,7 +921,6 @@ app.post("/api/activity/:id/messages", checkAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to save message" });
   }
 });
-
 
 // ✅ อัปเดตกิจกรรม
 app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
@@ -994,7 +966,16 @@ app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
            signUpDeadline=$5, description=$6, location=$7
        WHERE id=$8
        RETURNING *`,
-      [name, category, startDate, endDate, signUpDeadline, description, location, activityId]
+      [
+        name,
+        category,
+        startDate,
+        endDate,
+        signUpDeadline,
+        description,
+        location,
+        activityId,
+      ]
     );
 
     if (result.rows.length === 0) {
@@ -1007,7 +988,6 @@ app.put("/api/editActivity/:id", checkAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to edit activity" });
   }
 });
-
 
 // ✅ ดึงผู้เข้าร่วมกิจกรรม
 app.get("/api/activity/:id/participants", checkAuth, async (req, res) => {
@@ -1045,7 +1025,6 @@ app.get("/api/activity/:id/participants", checkAuth, async (req, res) => {
   }
 });
 
-
 // ✅ อัปเดตสถานะหรือบทบาทของผู้เข้าร่วม
 app.put("/api/activity/:id/participants/:userId", async (req, res) => {
   const { id: activityId, userId } = req.params;
@@ -1080,8 +1059,26 @@ app.put("/api/activity/:id/participants/:userId", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3100;
+const PORT = parseInt(process.env.PORT || "3100", 10);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
+
+// ---------- Graceful shutdown ----------
+const shutdown = async () => {
+  console.log("Shutting down...");
+  try {
+    await pool.end();
+    server.close(() => {
+      console.log("HTTP server closed");
+      process.exit(0);
+    });
+  } catch (err) {
+    console.error("Error during shutdown:", err);
+    process.exit(1);
+  }
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
