@@ -1,20 +1,18 @@
 version: 1
 applications:
-  - appRoot: "teamup_front"
+  - appRoot: "teamup-frontend"   # <-- ใส่ชื่อโฟลเดอร์จริงที่พบจากข้อ 1
     frontend:
       phases:
         preBuild:
           commands:
-            - cd teamup_front
             - npm ci
         build:
           commands:
             - npm run build
       artifacts:
-        # ถ้าใช้ Next.js SSR on Amplify, คุณอาจต้องปรับ baseDirectory ตาม docs.
-        baseDirectory: teamup_front/.next
+        baseDirectory: .next     # หรือ out / build ขึ้นกับ framework
         files:
           - '**/*'
       cache:
         paths:
-          - teamup_front/node_modules/**/*
+          - node_modules/**/*
