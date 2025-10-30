@@ -36,6 +36,12 @@ export default function Header({ user, profileImage, onLogout }) {
               >
                 กิจกรรมทั้งหมด
               </a>
+              <a
+                href="/groupChat"
+                className="text-gray-500 hover:text-gray-900 transition"
+              >
+                แชทของฉัน
+              </a>
             </nav>
           </div>
 

@@ -7,6 +7,7 @@ import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+import Header from "../component/header.jsx";
 
 export default function CreateActivityPage() {
   const [formData, setFormData] = useState({
@@ -235,20 +236,8 @@ export default function CreateActivityPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12 px-4">
+      <Header user={user} profileImage={profileImage} onLogout={handleLogout} />
       <div className="max-w-5xl mx-auto">
-        {/* User Info */}
-        <div className="text-right mb-4">
-          <span className="text-sm text-gray-600">
-            ผู้ใช้: {userInfo.name || "ไม่ระบุ"} |
-            <a
-              href={`${API_URL}/logout`}
-              className="ml-2 text-blue-600 hover:underline"
-            >
-              ออกจากระบบ
-            </a>
-          </span>
-        </div>
-
         {/* Header Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">

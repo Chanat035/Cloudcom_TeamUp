@@ -13,6 +13,7 @@ import {
   Tag,
 } from "lucide-react";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+import Header from "@/app/component/header.jsx";
 
 
 const EventDetail = () => {
@@ -192,22 +193,7 @@ const EventDetail = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800">
-        <div className="max-w-6xl mx-auto p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={goBack}
-              className="p-2 hover:bg-gray-700 rounded-full transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <div className="flex items-center">
-              <Calendar className="w-8 h-8 text-yellow-400 mr-3" />
-              <h1 className="text-3xl font-bold">รายละเอียดกิจกรรม</h1>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Header user={user} profileImage={profileImage} onLogout={handleLogout} />
 
       {/* ✅ Container รูปภาพกิจกรรม: ขนาด 520x520 พิกเซล พร้อมปรับรูปให้พอดี */}
       <div className="max-w-6xl mx-auto px-6 py-4">

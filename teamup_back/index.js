@@ -90,7 +90,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // ต้องเป็น true บน HTTPS
+      secure: true, // ต้องเป็น true บน HTTPS
       sameSite: "none", // ถ้าต้องการส่ง cookie ข้ามโดเมน (frontend != backend)
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days ตัวอย่าง

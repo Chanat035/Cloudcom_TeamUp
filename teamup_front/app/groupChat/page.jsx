@@ -3,6 +3,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+import Header from "../component/header.jsx";
 
 
 export default function GroupChatPage() {
@@ -92,6 +93,7 @@ export default function GroupChatPage() {
 
   return (
     <div className="flex h-screen border">
+      <Header user={user} profileImage={profileImage} onLogout={handleLogout} />
       {/* Sidebar */}
       <div className="w-1/4 border-r p-2">
         <h2 className="font-bold mb-2">กลุ่มทั้งหมดที่เข้าร่วม</h2>
