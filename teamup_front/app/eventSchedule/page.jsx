@@ -248,7 +248,7 @@ const EventsCalendar = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-black text-white">
-      <Header user={user} profileImage={profileImage} onLogout={handleLogout} />
+      <Header />
       {/* Header */}
       <div className="text-center mb-4">
         <div className="flex items-center justify-center mb-4">

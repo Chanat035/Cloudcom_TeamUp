@@ -193,7 +193,7 @@ const EventDetail = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <Header user={user} profileImage={profileImage} onLogout={handleLogout} />
+      <Header />
 
       {/* ✅ Container รูปภาพกิจกรรม: ขนาด 520x520 พิกเซล พร้อมปรับรูปให้พอดี */}
       <div className="max-w-6xl mx-auto px-6 py-4">
