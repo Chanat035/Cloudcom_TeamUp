@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Header from "./components/Header";
+import Header from "../component/header.jsx"
 import { API_URL } from "@/lib/config";
 
 const CATEGORIES = [
