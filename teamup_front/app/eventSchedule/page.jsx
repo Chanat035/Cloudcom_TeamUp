@@ -1,5 +1,3 @@
-// eventSchedule
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -7,14 +5,14 @@ import {
   Calendar,
   Clock,
   MapPin,
-  X,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
 } from "lucide-react";
-import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
+import {
+  API_URL
+} from "@/lib/config";
 import MainLayout from "../component/MainLayout.jsx"
-
 
 const EventsCalendar = () => {
   const [eventsDatabase, setEventsDatabase] = useState({});
@@ -174,23 +172,25 @@ const EventsCalendar = () => {
       days.push(
         <div
           key={day}
-          className={`h-24 border border-gray-800 p-1 cursor-pointer transition-colors ${
-            hasEvents
-              ? "bg-gray-900 text-white hover:bg-gray-800"
-              : "hover:bg-gray-700 text-white"
-          }`}
+          className={`h-24 border p-1 cursor-pointer transition-colors rounded-md flex flex-col justify-between
+            ${hasEvents
+              ? "bg-pink-100 border-pink-200 text-pink-700 hover:bg-pink-200/40"
+              : "hover:bg-pink-50 text-gray-900"}
+          `}
           onClick={() => handleDateClick(day)}
         >
           <div className="font-bold text-sm mb-1">{day}</div>
-          {hasEvents && (
-            <div className="text-xs text-yellow-400 font-medium truncate">
-              {hasEvents[0].title}
+          {hasEvents ? (
+            <div className="text-xs truncate">
+              <div className="text-pink-700/90 font-medium">
+                {hasEvents[0].title}
+              </div>
               {hasEvents.length > 1 && (
-                <div className="text-xs text-gray-400">
-                  +{hasEvents.length - 1} more
-                </div>
+                <div className="text-xs text-gray-500">+{hasEvents.length - 1} more</div>
               )}
             </div>
+          ) : (
+            <div className="text-xs text-gray-400">ไม่มีเหตุการณ์</div>
           )}
         </div>
       );
@@ -244,183 +244,123 @@ const EventsCalendar = () => {
   }
 
   if (!authChecked)
-    return <div className="text-white">Checking authentication...</div>;
+    return <div className="text-gray-600">Checking authentication...</div>;
 
   return (
-  <MainLayout>
-    <div className="max-w-6xl mx-auto p-6 bg-black text-white">
-      {/* Header */}
-      <div className="text-center mb-4">
-        <div className="flex items-center justify-center mb-4">
-          <Calendar className="w-12 h-12 text-white mr-4" />
-          <h1 className="text-4xl font-bold">Events</h1>
-        </div>
-
-        {/* Month Navigation */}
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <button
-            onClick={() => navigateMonth("prev")}
-            className="p-2 hover:bg-gray-700 rounded"
-          >
-            <ChevronLeft />
-          </button>
-          <h2 className="text-2xl font-semibold">
-            {monthNames[currentMonth]} {currentYear + 543}
-          </h2>
-          <button
-            onClick={() => navigateMonth("next")}
-            className="p-2 hover:bg-gray-700 rounded"
-          >
-            <ChevronRight />
-          </button>
-        </div>
-
-        {/* Date Picker Button */}
-        <button
-          onClick={openDatePicker}
-          className="mb-4 bg-yellow-500 text-black px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center gap-2 mx-auto"
-        >
-          <CalendarDays className="w-4 h-4" />
-          Select Date
-        </button>
-      </div>
-      {/* Search Bar */}
-      <div className="mb-4 flex justify-center">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search activity..."
-          className="px-4 py-2 rounded-lg text-white w-80"
-        />
-        <button
-          onClick={handleSearch}
-          className="ml-2 bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400"
-        >
-          Search
-        </button>
-      </div>
-
-      {/* Days of week header */}
-      <div className="grid grid-cols-7 gap-0 mb-4">
-        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
-          <div
-            key={day}
-            className="h-10 flex items-center justify-center bg-gray-900 font-semibold border border-gray-800 text-white"
-          >
-            {day}
+    <MainLayout>
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Header */}
+        <div className="text-center mb-4">
+          <div className="flex items-center justify-center mb-4">
+            <Calendar className="w-12 h-12 text-pink-600 mr-4" />
+            <h1 className="text-4xl font-bold text-gray-900">Events</h1>
           </div>
-        ))}
-      </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-0 border border-gray-800">
-        {renderCalendarGrid()}
-      </div>
-
-      {showDatePicker && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-lg max-w-sm w-full p-4 text-white">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold">
-                {monthNames[pickerMonth]} {pickerYear + 543}
-              </h3>
-            </div>
-            <div className="flex justify-between items-center mt-2">
-              <button
-                onClick={() => setPickerYear(pickerYear - 1)}
-                className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
-              >
-                ปีก่อน
-              </button>
-              <span>{pickerYear + 543}</span>
-              <button
-                onClick={() => setPickerYear(pickerYear + 1)}
-                className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
-              >
-                ปีหน้า
-              </button>
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {monthNames.map((month, index) => (
-                <button
-                  key={month}
-                  className={`px-3 py-2 rounded ${
-                    index === pickerMonth
-                      ? "bg-yellow-500 text-black"
-                      : "bg-gray-800 text-white hover:bg-gray-700"
-                  }`}
-                  onClick={() => {
-                    setCurrentMonth(index);
-                    setCurrentYear(pickerYear);
-                    setShowDatePicker(false);
-                  }}
-                >
-                  {month} {/* แสดงชื่อเดือนเต็ม */}
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => setShowDatePicker(false)}
-                className="bg-yellow-500 text-black px-4 py-1 rounded hover:bg-yellow-400"
-              >
-                Close
-              </button>
-            </div>
+          {/* Month Navigation */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <button
+              onClick={() => navigateMonth("prev")}
+              className="p-2 rounded hover:bg-white/50"
+            >
+              <ChevronLeft className="text-gray-700" />
+            </button>
+            <h2 className="text-2xl font-semibold text-gray-900">
+              {monthNames[currentMonth]} {currentYear + 543}
+            </h2>
+            <button
+              onClick={() => navigateMonth("next")}
+              className="p-2 rounded hover:bg-white/50"
+            >
+              <ChevronRight className="text-gray-700" />
+            </button>
           </div>
-        </div>
-      )}
 
-      {/* Event Details Modal */}
-      {showModal &&
-        selectedDate &&
-        getEventsForDate(currentYear, currentMonth, selectedDate) && (
-          <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6 text-white">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-bold">
-                  {selectedDate} {monthNames[currentMonth]} {currentYear}
+          {/* Date Picker Button */}
+          <button
+            onClick={openDatePicker}
+            className="mb-4 bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600 transition-colors flex items-center gap-2 mx-auto"
+          >
+            <CalendarDays className="w-4 h-4" />
+            Select Date
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4 flex justify-center">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search activity..."
+            className="px-4 py-2 rounded-lg text-gray-900 w-80 border border-gray-200 bg-white/70"
+          />
+          <button
+            onClick={handleSearch}
+            className="ml-2 bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600"
+          >
+            Search
+          </button>
+        </div>
+
+        {/* Days of week header */}
+        <div className="grid grid-cols-7 gap-0 mb-4">
+          {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
+            <div
+              key={day}
+              className="h-10 flex items-center justify-center bg-white/60 font-semibold border border-gray-200 text-gray-900 rounded"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-0">
+          {renderCalendarGrid()}
+        </div>
+
+        {showDatePicker && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white/90 rounded-lg max-w-sm w-full p-4 text-gray-900">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-bold">
+                  {monthNames[pickerMonth]} {pickerYear + 543}
                 </h3>
               </div>
-              <div className="space-y-4">
-                {getEventsForDate(currentYear, currentMonth, selectedDate).map(
-                  (event, index) => (
-                    <div
-                      key={index}
-                      onClick={() =>
-                        (window.location.href = `/eventDetail/${event.id}`)
-                      }
-                      className="border border-gray-800 rounded-lg p-4 bg-gray-800 cursor-pointer hover:bg-gray-700 transition"
-                    >
-                      <h4 className="text-xl font-semibold text-yellow-400">
-                        {event.title}
-                      </h4>
-                      <div className="flex items-center text-yellow-200">
-                        <MapPin className="w-4 h-4 mr-2" /> {event.venue}
-                      </div>
-                      <p className="text-gray-300">{event.description}</p>
-                      {event.signupdeadline && (
-                        <div className="flex items-center text-yellow-300 mt-2">
-                          <Clock className="w-4 h-4 mr-2" />
-                          ลงสมัครได้ถึง :{" "}
-                          {parseBangkok(event.signupdeadline)?.toLocaleString(
-                            "th-TH",
-                            {
-                              dateStyle: "long",
-                              timeStyle: "short",
-                            }
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                )}
-              </div>
-              <div className="mt-6 text-center">
+              <div className="flex justify-between items-center mt-2">
                 <button
-                  onClick={closeModal}
-                  className="bg-yellow-500 text-black px-6 py-2 rounded-lg hover:bg-yellow-400"
+                  onClick={() => setPickerYear(pickerYear - 1)}
+                  className="px-2 py-1 rounded hover:bg-gray-100"
+                >
+                  ปีก่อน
+                </button>
+                <span>{pickerYear + 543}</span>
+                <button
+                  onClick={() => setPickerYear(pickerYear + 1)}
+                  className="px-2 py-1 rounded hover:bg-gray-100"
+                >
+                  ปีหน้า
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {monthNames.map((month, index) => (
+                  <button
+                    key={month}
+                    className={`px-3 py-2 rounded ${index === pickerMonth ? "bg-pink-500 text-white" : "bg-white/80 text-gray-900 hover:bg-gray-100"}`}
+                    onClick={() => {
+                      setCurrentMonth(index);
+                      setCurrentYear(pickerYear);
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    {month}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="bg-pink-500 text-white px-4 py-1 rounded hover:bg-pink-600"
                 >
                   Close
                 </button>
@@ -428,8 +368,65 @@ const EventsCalendar = () => {
             </div>
           </div>
         )}
-    </div>
-  </MainLayout>
+
+        {/* Event Details Modal */}
+        {showModal &&
+          selectedDate &&
+          getEventsForDate(currentYear, currentMonth, selectedDate) && (
+            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+              <div className="bg-white/95 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6 text-gray-900 shadow-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold">
+                    {selectedDate} {monthNames[currentMonth]} {currentYear + 543}
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {getEventsForDate(currentYear, currentMonth, selectedDate).map(
+                    (event, index) => (
+                      <div
+                        key={index}
+                        onClick={() =>
+                          (window.location.href = `/eventDetail/${event.id}`)
+                        }
+                        className="border rounded-lg p-4 bg-white/80 cursor-pointer hover:bg-white/90 transition"
+                      >
+                        <h4 className="text-xl font-semibold text-pink-600">
+                          {event.title}
+                        </h4>
+                        <div className="flex items-center text-pink-500">
+                          <MapPin className="w-4 h-4 mr-2" /> {event.venue}
+                        </div>
+                        <p className="text-gray-700">{event.description}</p>
+                        {event.signupdeadline && (
+                          <div className="flex items-center text-pink-500 mt-2">
+                            <Clock className="w-4 h-4 mr-2" />
+                            ลงสมัครได้ถึง :{" "}
+                            {parseBangkok(event.signupdeadline)?.toLocaleString(
+                              "th-TH",
+                              {
+                                dateStyle: "long",
+                                timeStyle: "short",
+                              }
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={closeModal}
+                    className="bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+      </div>
+    </MainLayout>
   );
 };
 

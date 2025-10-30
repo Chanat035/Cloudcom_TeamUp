@@ -1,313 +1,198 @@
-// eventDetail/[id]/
-
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  ArrowLeft,
-  FileText,
-  Tag,
-} from "lucide-react";
-import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import MainLayout from "@/app/component/MainLayout.jsx"
+import React, { useEffect, useState } from "react";
+import MainLayout from "@/app/component/MainLayout.jsx";
+import { API_URL } from "@/lib/config";
+import { MapPin, Clock, User, ArrowLeft } from "lucide-react";
 
+function parseBangkok(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return new Date(d.getTime() - 7 * 60 * 60 * 1000);
+}
 
-const EventDetail = () => {
-  const params = useParams();
-  const router = useRouter();
-  const id = params?.id;
-
-  const [loading, setLoading] = useState(true);
+export default function EventDetailPage() {
   const [eventData, setEventData] = useState(null);
-  const [userInfo, setUserInfo] = useState(null);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [activityImageUrl, setActivityImageUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
+  const [error, setError] = useState(null);
 
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/status`, {
-        credentials: "include",
-      });
-      const data = await response.json();
-
-      if (!data.isAuthenticated) {
-        window.location.href = `${API_URL}/login`;
-        return;
-      }
-      setUserInfo(data.userInfo);
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      window.location.href = `${API_URL}/login`;
-    }
-  };
-
-  const fetchEvent = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/eventDetail/${id}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error("Failed to fetch event");
-      const data = await res.json();
-      setEventData(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchActivityImage = async () => {
-    try {
-      const res = await fetch(
-        `${API_URL}/api/getActivityImage/${id}`
-      );
-      const data = await res.json();
-      setActivityImageUrl(data.imageUrl);
-    } catch (err) {
-      console.error("Failed to fetch activity image:", err);
-    }
-  };
-
-  const checkJoined = async () => {
-    if (!id || !userInfo) return;
-    try {
-      const res = await fetch(
-        `${API_URL}/api/eventDetail/${id}/checkParticipant`,
-        { credentials: "include" }
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      setHasJoined(data.joined);
-    } catch (err) {
-      console.error("Check joined failed:", err);
-    }
-  };
-
+  // try to get id from URL: expects path like /eventDetail/{id}
   useEffect(() => {
-    checkAuthStatus();
+    const fetchEvent = async () => {
+      try {
+        const path = window.location.pathname || "";
+        const parts = path.split("/").filter(Boolean);
+        // find last segment as id (safe heuristic)
+        const id = parts[parts.length - 1];
+        if (!id) {
+          setError("ไม่พบรหัสกิจกรรมใน URL");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`${API_URL}/api/event/${id}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("fetch_failed");
+        const data = await res.json();
+        // normalize fields
+        setEventData({
+          id: data.id || id,
+          name: data.name || data.title || "ชื่อกิจกรรม",
+          date: data.startdate || data.date || "",
+          enddate: data.enddate || "",
+          time: data.time || "",
+          location: data.location || data.venue || "ไม่ระบุสถานที่",
+          image: data.image || data.photo || "",
+          description: data.description || data.detail || "ไม่มีคำอธิบาย",
+          organizer: data.organizer || data.user_name || data.created_by || "ไม่ระบุ",
+          signupdeadline: data.signupdeadline || data.deadline || null,
+        });
+        setLoading(false);
+      } catch (err) {
+        console.error(err);
+        setError("เกิดข้อผิดพลาดในการดึงข้อมูลกิจกรรม");
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
   }, []);
 
-  useEffect(() => {
-    if (id) {
-      fetchEvent();
-      fetchActivityImage();
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (id && userInfo) {
-      checkJoined();
-    }
-  }, [id, userInfo]);
-
   const handleJoin = async () => {
+    if (!eventData) return;
+    setJoining(true);
     try {
-      const res = await fetch(
-        `${API_URL}/api/eventDetail/${id}/join`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        alert("เข้าร่วมกิจกรรมสำเร็จ!");
-        setHasJoined(true);
-      } else {
-        alert(data.error || "ไม่สามารถเข้าร่วมได้");
+      const res = await fetch(`${API_URL}/api/event/${eventData.id}/join`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.message || "join_failed");
       }
+      // feedback simple
+      alert("เข้าร่วมกิจกรรมเรียบร้อยแล้ว");
     } catch (err) {
-      console.error("Join failed:", err);
-      alert("เกิดข้อผิดพลาด");
+      console.error(err);
+      alert("ไม่สามารถเข้าร่วมได้: " + (err.message || ""));
+    } finally {
+      setJoining(false);
     }
   };
 
-  // เพิ่มฟังก์ชันใหม่สำหรับออกจากกิจกรรม
-  const handleCancelParticipation = async () => {
-    const confirmed = window.confirm(
-      "คุณแน่ใจหรือไม่ว่าต้องการออกจากกิจกรรมนี้?"
-    );
-    if (!confirmed) return;
-
-    try {
-      const res = await fetch(
-        `${API_URL}/api/eventDetail/${id}/cancel`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      const data = await res.json();
-      if (res.ok) {
-        alert("คุณได้ออกจากกิจกรรมแล้ว");
-        setHasJoined(false);
-      } else {
-        alert(data.error || "ไม่สามารถออกจากกิจกรรมได้");
-      }
-    } catch (err) {
-      console.error("Cancel failed:", err);
-      alert("เกิดข้อผิดพลาด");
-    }
-  };
-
-  const isSignUpClosed = () => {
-    if (!eventData?.signupdeadline) return false;
-    const deadline = new Date(eventData.signupdeadline);
-    const now = new Date();
-    return now > deadline;
-  };
-
-  const goBack = () => {
-    router.push("/eventSchedule");
-  };
-
-  function parseBangkok(dateStr) {
-    if (!dateStr) return null;
-    const d = new Date(dateStr);
-    return new Date(d.getTime() - 7 * 60 * 60 * 1000);
-  }
-
-  if (loading) {
+  if (loading)
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-xl">กำลังโหลด...</div>
-      </div>
+      <MainLayout>
+        <div className="p-6 text-gray-700">กำลังโหลดข้อมูลกิจกรรม...</div>
+      </MainLayout>
     );
-  }
 
-  if (!eventData) {
+  if (error)
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-xl">ไม่พบข้อมูลกิจกรรม</div>
-      </div>
+      <MainLayout>
+        <div className="p-6 text-red-600">{error}</div>
+      </MainLayout>
     );
-  }
+
+  const start = parseBangkok(eventData.date);
+  const end = parseBangkok(eventData.enddate);
+  const dateStr = start
+    ? start.toLocaleString("th-TH", { dateStyle: "long" })
+    : "ไม่ระบุวันที่";
 
   return (
     <MainLayout>
-    <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen p-6">
+        <div className="max-w-4xl mx-auto">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 text-gray-700 mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" /> ย้อนกลับ
+          </button>
 
-      {/* ✅ Container รูปภาพกิจกรรม: ขนาด 520x520 พิกเซล พร้อมปรับรูปให้พอดี */}
-      <div className="max-w-6xl mx-auto px-6 py-4">
-        {activityImageUrl && (
-          <div className="w-full h-[520px] overflow-hidden rounded-xl shadow-lg mx-auto bg-gray-800">
-            <img
-              src={activityImageUrl}
-              alt={eventData.name}
-              className="w-full h-full object-contain object-center"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
-          <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 p-6">
-            <h2 className="text-4xl font-bold text-black mb-2">
-              {eventData.name}
-            </h2>
-            <div className="flex items-center text-black text-lg">
-              <Tag className="w-5 h-5 mr-2" />
-              <span>{eventData.category || "กิจกรรม"}</span>
+          <div className="bg-white/80 rounded-xl shadow-lg overflow-hidden">
+            {/* Hero */}
+            <div className="bg-gradient-to-r from-pink-500 to-pink-400 p-6">
+              <h1 className="text-3xl font-bold text-white">{eventData.name}</h1>
+              <p className="text-sm text-pink-100 mt-1">
+                {dateStr} {start ? ` · ${start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}{" "}
+                {eventData.location ? `· ${eventData.location}` : ""}
+              </p>
             </div>
-          </div>
 
-          <div className="p-6 grid md:grid-cols-2 gap-6">
-            <div className="space-y-6">
-              <div className="bg-gray-800 rounded-lg p-4">
-                <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  วันที่
-                </h3>
-                <div className="space-y-10 text-lg">
-                  <div className="flex items-center text-gray-300">
-                    เริ่มต้น :{" "}
-                    {parseBangkok(eventData.startdate)?.toLocaleString(
-                      "th-TH",
-                      {
-                        dateStyle: "long",
-                        timeStyle: "short",
-                      }
-                    )}
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    สิ้นสุด :{" "}
-                    {parseBangkok(eventData.enddate)?.toLocaleString(
-                      "th-TH",
-                      {
-                        dateStyle: "long",
-                        timeStyle: "short",
-                      }
-                    )}
-                  </div>
+            <div className="p-6 grid md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 space-y-4">
+                <div className="w-full h-64 rounded-lg overflow-hidden bg-white/60 border border-gray-100">
+                  {eventData.image ? (
+                    // use img with object-cover so it looks good
+                    <img src={eventData.image} alt={eventData.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">ไม่มีรูปภาพ</div>
+                  )}
+                </div>
+
+                <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
+                  <h3 className="font-semibold mb-2">รายละเอียด</h3>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{eventData.description}</p>
                 </div>
               </div>
 
-              <div className="bg-gray-800 rounded-lg p-4">
-                <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
-                  <MapPin className="w-5 h-5 mr-2" />
-                  สถานที่
-                </h3>
-                <p className="text-gray-300 text-lg">{eventData.location}</p>
-              </div>
-            </div>
+              <aside className="space-y-4">
+                <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> วันที่ & เวลา</h4>
+                  <div className="text-sm">
+                    <div>{dateStr}</div>
+                    {start && (
+                      <div>{start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {end ? `- ${end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</div>
+                    )}
+                  </div>
+                </div>
 
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-xl font-semibold mb-4 text-yellow-400 flex items-center">
-                <FileText className="w-5 h-5 mr-2" />
-                รายละเอียด
-              </h3>
-              <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {eventData.description || "ไม่มีรายละเอียดเพิ่มเติม"}
-              </div>
-            </div>
-          </div>
+                <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="w-4 h-4" /> สถานที่</h4>
+                  <div className="text-sm">{eventData.location}</div>
+                </div>
 
-          <div className="p-6 flex justify-end">
-            {userInfo?.sub === eventData.owner ? (
-              // Organizer
-              <button
-                onClick={() => router.push(`/editActivity/${id}`)}
-                className="px-6 py-3 rounded-lg shadow font-bold bg-blue-500 text-white hover:bg-blue-400 transition-colors"
-              >
-                แก้ไขกิจกรรม
-              </button>
-            ) : hasJoined ? (
-              // ถ้าเข้าร่วมแล้ว → โชว์ปุ่มออกจากกิจกรรม
-              <button
-                onClick={handleCancelParticipation}
-                className="px-6 py-3 rounded-lg shadow font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"
-              >
-                ออกจากกิจกรรม
-              </button>
-            ) : (
-              // ยังไม่เข้าร่วม → โชว์ปุ่มเข้าร่วม
-              <button
-                onClick={handleJoin}
-                disabled={isSignUpClosed()}
-                className={`px-6 py-3 rounded-lg shadow font-bold transition-colors ${
-                  isSignUpClosed()
-                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : "bg-yellow-500 text-black hover:bg-yellow-400"
-                }`}
-              >
-                {isSignUpClosed() ? "หมดเขตรับสมัครแล้ว" : "เข้าร่วมกิจกรรม"}
-              </button>
-            )}
+                <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2"><User className="w-4 h-4" /> ผู้จัด</h4>
+                  <div className="text-sm">{eventData.organizer}</div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleJoin}
+                    disabled={joining}
+                    className="flex-1 px-4 py-2 rounded shadow-sm bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60"
+                  >
+                    {joining ? "กำลังเข้าร่วม..." : "เข้าร่วม"}
+                  </button>
+                  <button
+                    onClick={() => navigator.share ? navigator.share({ title: eventData.name, url: window.location.href }) : alert("ระบบแชร์ไม่รองรับ")}
+                    className="px-4 py-2 rounded shadow-sm bg-white border border-gray-200 text-gray-900"
+                  >
+                    แชร์
+                  </button>
+                </div>
+
+                {eventData.signupdeadline && (
+                  <div className="text-sm text-gray-600 mt-2">
+                    ลงทะเบียนได้ถึง:{" "}
+                    {parseBangkok(eventData.signupdeadline).toLocaleString("th-TH", {
+                      dateStyle: "long",
+                      timeStyle: "short",
+                    })}
+                  </div>
+                )}
+              </aside>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </MainLayout>
+    </MainLayout>
   );
-};
-
-export default EventDetail;
+}

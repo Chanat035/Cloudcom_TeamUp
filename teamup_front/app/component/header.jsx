@@ -92,7 +92,7 @@ export default function Header({ user: propUser = null, profileImage: propProfil
             </div>
 
             <nav className="hidden md:flex space-x-6 items-center">
-              <a href="/" className="text-gray-900 font-medium hover:text-blue-600 transition">หน้าหลัก</a>
+              <a href="/home" className="text-gray-900 font-medium hover:text-blue-600 transition">หน้าหลัก</a>
               <a href="/eventSchedule" className="text-gray-500 hover:text-gray-900 transition">กิจกรรมทั้งหมด</a>
 
               <button onClick={() => router.push("/groupChat")} className="text-gray-500 hover:text-gray-900 transition" title="ไปยังแชทของฉัน">
