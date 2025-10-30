@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "../component/MainLayout.jsx"
 
 export default function GroupChatPage() {
   const [groups, setGroups] = useState([]);

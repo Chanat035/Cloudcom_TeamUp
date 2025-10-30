@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "../component/MainLayout.jsx"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3100";
 

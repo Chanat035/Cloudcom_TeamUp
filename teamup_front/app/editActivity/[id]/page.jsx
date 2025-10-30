@@ -8,7 +8,7 @@ import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "@/app/component/MainLayout.jsx"
 
 export default function EditActivityPage() {
   const { id } = useParams();
