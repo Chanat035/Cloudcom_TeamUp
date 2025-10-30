@@ -4,7 +4,7 @@
 import { useRouter } from "next/navigation";
 import { Users, Plus, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
-import { API_URL } from "@/lib/config"; //
+import { API_URL } from "@/lib/config";
 
 export default function Header({
   user: propUser = null,
@@ -65,7 +65,7 @@ export default function Header({
     ? propOnLogout
     : async () => {
         try {
-          await fetch(`/api/auth/logout`, {
+          await fetch(`${API_URL}/api/auth/logout`, {
             method: "POST",
             credentials: "include",
           });

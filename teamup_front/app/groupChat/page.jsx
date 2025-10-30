@@ -96,10 +96,10 @@ export default function GroupChatPage() {
     <MainLayout>
     <div className="flex h-screen border">
       <div className="w-1/4 border-r p-2">
-        <h2 className="font-bold mb-2">กลุ่มทั้งหมดที่เข้าร่วม</h2>
+        <h2 className="font-bold mb-2 text-black">กลุ่มทั้งหมดที่เข้าร่วม</h2>
         <ul>
           {(Array.isArray(groups) ? groups : []).map((g) => (
-            <li key={g.id} onClick={() => setActiveGroup(g)} className={`p-2 cursor-pointer rounded ${activeGroup?.id === g.id ? "bg-blue-100 text-black font-semibold" : ""}`}>
+            <li key={g.id} onClick={() => setActiveGroup(g)} className={`p-2 cursor-pointer rounded ${activeGroup?.id === g.id ? "bg-blue-100 text-black font-semibold" : "text-gray-800 hover:bg-gray-100"}`}>
               {g.name}
             </li>
           ))}
@@ -107,7 +107,7 @@ export default function GroupChatPage() {
       </div>
 
       <div className="flex-1 flex flex-col">
-        <div className="border-b p-3 font-bold text-lg">{activeGroup ? activeGroup.name : "ยังไม่ได้เลือกกลุ่ม"}</div>
+        <div className="border-b p-3 font-bold text-black text-lg">{activeGroup ? activeGroup.name : "ยังไม่ได้เลือกกลุ่ม"}</div>
 
         <div className="flex-1 p-3 overflow-y-auto">
           {(Array.isArray(messages) ? messages : []).map((m) => {

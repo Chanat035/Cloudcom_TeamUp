@@ -151,9 +151,8 @@ export default function LandingPage() {
         }
 
         // fetch events
-        const r = await fetch(`${API}/api/eventSchedule`);
+        const r = await fetch(`${API}/api/eventSchedule`, { credentials: "include" });
         const json = r.ok ? await r.json() : [];
-        // console.debug("raw events sample", json && json[0]);
 
         const now = new Date();
 

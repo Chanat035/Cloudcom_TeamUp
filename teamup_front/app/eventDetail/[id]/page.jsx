@@ -7,8 +7,13 @@ import { MapPin, Clock, User, ArrowLeft } from "lucide-react";
 
 function parseBangkok(dateStr) {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
-  return new Date(d.getTime() - 7 * 60 * 60 * 1000);
+  try {
+    const d = new Date(dateStr);
+    // convert from UTC to Asia/Bangkok (UTC+7) if server stores UTC
+    return new Date(d.getTime() - 7 * 60 * 60 * 1000);
+  } catch {
+    return null;
+  }
 }
 
 export default function EventDetailPage() {
@@ -17,47 +22,69 @@ export default function EventDetailPage() {
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState(null);
 
-  // try to get id from URL: expects path like /eventDetail/{id}
+  // Extract id from URL (last path segment)
+  function extractIdFromPath() {
+    try {
+      const path = window.location.pathname || "";
+      const parts = path.split("/").filter(Boolean);
+      return parts[parts.length - 1] || null;
+    } catch {
+      return null;
+    }
+  }
+
   useEffect(() => {
     const fetchEvent = async () => {
-      try {
-        const path = window.location.pathname || "";
-        const parts = path.split("/").filter(Boolean);
-        // find last segment as id (safe heuristic)
-        const id = parts[parts.length - 1];
-        if (!id) {
-          setError("ไม่พบรหัสกิจกรรมใน URL");
-          setLoading(false);
-          return;
-        }
+      setLoading(true);
+      setError(null);
 
-        const res = await fetch(`${API_URL}/api/eventDetail/${id}`, {
+      const id = extractIdFromPath();
+      if (!id) {
+        setError("ไม่พบรหัสกิจกรรมใน URL");
+        setLoading(false);
+        return;
+      }
+
+      if (!API_URL) {
+        setError("ค่า API_URL ไม่ได้ตั้งค่า (ตรวจสอบ /lib/config)");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/api/event/${id}`, {
           credentials: "include",
         });
-        if (!res.ok) throw new Error("fetch_failed");
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
+        }
         const data = await res.json();
-        // normalize fields
-        setEventData({
-          id: data.id || id,
-          name: data.name || data.title || "ชื่อกิจกรรม",
-          date: data.startdate || data.date || "",
-          enddate: data.enddate || "",
-          time: data.time || "",
-          location: data.location || data.venue || "ไม่ระบุสถานที่",
-          image: data.image || data.photo || "",
-          description: data.description || data.detail || "ไม่มีคำอธิบาย",
-          organizer: data.organizer || data.user_name || data.created_by || "ไม่ระบุ",
-          signupdeadline: data.signupdeadline || data.deadline || null,
-        });
-        setLoading(false);
+
+        const normalized = {
+          id: data.id ?? id,
+          name: data.name ?? data.title ?? "ชื่อกิจกรรม",
+          date: data.startdate ?? data.date ?? data.start ?? "",
+          enddate: data.enddate ?? data.end ?? "",
+          time: data.time ?? "",
+          location: data.location ?? data.venue ?? "ไม่ระบุสถานที่",
+          image: data.image ?? data.photo ?? data.cover ?? "",
+          description: data.description ?? data.detail ?? data.desc ?? "ไม่มีคำอธิบาย",
+          organizer: data.organizer ?? data.user_name ?? data.created_by ?? "ไม่ระบุ",
+          signupdeadline: data.signupdeadline ?? data.deadline ?? null,
+        };
+
+        setEventData(normalized);
       } catch (err) {
-        console.error(err);
-        setError("เกิดข้อผิดพลาดในการดึงข้อมูลกิจกรรม");
+        console.error("fetch event failed:", err);
+        setError("ไม่สามารถดึงข้อมูลกิจกรรมได้: " + (err.message || ""));
+      } finally {
         setLoading(false);
       }
     };
 
     fetchEvent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleJoin = async () => {
@@ -71,13 +98,12 @@ export default function EventDetailPage() {
         body: JSON.stringify({}),
       });
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        throw new Error(payload.message || "join_failed");
+        const t = await res.text().catch(() => "");
+        throw new Error(`${res.status} ${res.statusText} - ${t}`);
       }
-      // feedback simple
       alert("เข้าร่วมกิจกรรมเรียบร้อยแล้ว");
     } catch (err) {
-      console.error(err);
+      console.error("join error:", err);
       alert("ไม่สามารถเข้าร่วมได้: " + (err.message || ""));
     } finally {
       setJoining(false);
@@ -94,7 +120,12 @@ export default function EventDetailPage() {
   if (error)
     return (
       <MainLayout>
-        <div className="p-6 text-red-600">{error}</div>
+        <div className="p-6 max-w-3xl mx-auto">
+          <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700">
+            <h4 className="font-semibold mb-2">เกิดข้อผิดพลาด</h4>
+            <div>{error}</div>
+          </div>
+        </div>
       </MainLayout>
     );
 
@@ -107,7 +138,7 @@ export default function EventDetailPage() {
   return (
     <MainLayout>
       <div className="min-h-screen p-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <button
             onClick={() => window.history.back()}
             className="flex items-center gap-2 text-gray-700 mb-4"
@@ -120,8 +151,9 @@ export default function EventDetailPage() {
             <div className="bg-gradient-to-r from-pink-500 to-pink-400 p-6">
               <h1 className="text-3xl font-bold text-white">{eventData.name}</h1>
               <p className="text-sm text-pink-100 mt-1">
-                {dateStr} {start ? ` · ${start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}{" "}
-                {eventData.location ? `· ${eventData.location}` : ""}
+                {dateStr}
+                {start ? ` · ${start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+                {eventData.location ? ` · ${eventData.location}` : ""}
               </p>
             </div>
 
@@ -129,8 +161,11 @@ export default function EventDetailPage() {
               <div className="md:col-span-2 space-y-4">
                 <div className="w-full h-64 rounded-lg overflow-hidden bg-white/60 border border-gray-100">
                   {eventData.image ? (
-                    // use img with object-cover so it looks good
-                    <img src={eventData.image} alt={eventData.name} className="w-full h-full object-cover" />
+                    <img
+                      src={eventData.image}
+                      alt={eventData.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">ไม่มีรูปภาพ</div>
                   )}
@@ -170,12 +205,6 @@ export default function EventDetailPage() {
                     className="flex-1 px-4 py-2 rounded shadow-sm bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60"
                   >
                     {joining ? "กำลังเข้าร่วม..." : "เข้าร่วม"}
-                  </button>
-                  <button
-                    onClick={() => navigator.share ? navigator.share({ title: eventData.name, url: window.location.href }) : alert("ระบบแชร์ไม่รองรับ")}
-                    className="px-4 py-2 rounded shadow-sm bg-white border border-gray-200 text-gray-900"
-                  >
-                    แชร์
                   </button>
                 </div>
 
