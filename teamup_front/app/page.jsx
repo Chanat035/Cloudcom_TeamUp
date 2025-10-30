@@ -34,7 +34,7 @@ export default function Home() {
 
   const handleLogin = () => {
     if (isAuthenticated) {
-      router.push("/eventSchedule");
+      router.push("/home");
     } else {
       window.location.href = loginUrl;
     }
