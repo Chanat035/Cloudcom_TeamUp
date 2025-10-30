@@ -151,7 +151,7 @@ app.get("/callback", async (req, res) => {
     };
 
     req.session.save(() => {
-      res.redirect(FRONTEND_URL);
+      res.redirect(`${FRONTEND_URL}/home`);
     });
   });
 });
