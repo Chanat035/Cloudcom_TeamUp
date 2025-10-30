@@ -31,7 +31,7 @@ export default function EventDetailPage() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/api/event/${id}`, {
+        const res = await fetch(`${API_URL}/api/eventDetail/${id}`, {
           credentials: "include",
         });
         if (!res.ok) throw new Error("fetch_failed");

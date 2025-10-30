@@ -190,7 +190,7 @@ const EventsCalendar = () => {
               )}
             </div>
           ) : (
-            <div className="text-xs text-gray-400">ไม่มีเหตุการณ์</div>
+            <div className="text-xs text-gray-400"></div>
           )}
         </div>
       );
