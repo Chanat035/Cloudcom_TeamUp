@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Header from "./components/Header";
+import Header from "../components/header.jsx";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3100";
 
