@@ -347,6 +347,40 @@ app.get("/testdb", async (req, res) => {
   }
 });
 
+app.get("/api/user/:id", async (req, res) => {
+  const userId = req.params.id;
+  if (!userId) return res.status(400).json({ error: "Missing user id" });
+
+  try {
+    const resp = await cognitoClient.send(
+      new AdminGetUserCommand({
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Username: userId,
+      })
+    );
+    const attrs = resp.UserAttributes || [];
+
+    const nameAttr =
+      attrs.find((a) => a.Name === "name") ||
+      attrs.find((a) => a.Name === "given_name") ||
+      attrs.find((a) => a.Name === "preferred_username") ||
+      attrs.find((a) => a.Name === "email") ||
+      null;
+
+    const displayName = nameAttr ? nameAttr.Value : null;
+
+    // คืนเฉพาะข้อมูลสาธารณะที่ปลอดภัย
+    res.json({
+      id: userId,
+      name: displayName,
+    });
+  } catch (err) {
+    console.warn("AdminGetUser failed for", userId, err?.message || err);
+    // คืนค่าล้มเหลวแบบนุ่มนวล (frontend จะทำ fallback เป็น "ไม่ระบุชื่อผู้จัด")
+    res.json({ id: userId, name: null });
+  }
+});
+
 app.post("/api/createActivity", async (req, res) => {
   try {
     const {

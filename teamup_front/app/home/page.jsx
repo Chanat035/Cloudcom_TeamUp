@@ -133,7 +133,7 @@ export default function LandingPage() {
               setUser(authJson.userInfo || {});
               // profile image and interests best-effort
               try {
-                const pRes = await fetch(`${API}/api/getProfile`, { credentials: "include" });
+                const pRes = await fetch(`${API}/api/settings/getInterests`, { credentials: "include" });
                 if (pRes.ok) {
                   const pj = await pRes.json();
                   setProfileImage(pj.imageUrl || pj.avatar || null);
