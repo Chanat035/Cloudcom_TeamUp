@@ -72,7 +72,7 @@ export default function Header({
         } catch (err) {
           console.error("Logout error:", err);
         } finally {
-          window.location.href = "/login";
+          window.location.href = "/";
         }
       };
 
