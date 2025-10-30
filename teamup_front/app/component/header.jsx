@@ -96,10 +96,6 @@ export default function Header({ user, profileImage, onLogout }) {
                 >
                   <LogOut className="w-5 h-5" />
                 </button>
-                {hover && (
-                  <div className="absolute right-0 mt-2 bg-black text-white text-xs rounded px-2 py-1">
-                  </div>
-                )}
               </div>
             </div>
           </div>
