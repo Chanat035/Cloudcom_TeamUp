@@ -293,21 +293,22 @@ export default function EventDetailPage() {
 
             <div className="p-6 grid md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-4">
-                <div className="w-full h-64 rounded-lg overflow-hidden bg-white/60 border border-gray-100">
+                <div className="w-full max-h-[400px] flex items-center justify-center bg-white border border-gray-100 rounded-lg overflow-hidden shadow-sm">
                   {imageUrl ? (
                     // show imageUrl (from /api/getActivityImage or fallback)
                     // add onError fallback to avoid broken image
                     <img
                       src={imageUrl}
                       alt={eventData.name}
-                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      className="max-h-[400px] w-auto object-contain"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = "/default-activity.png";
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">ไม่มีรูปภาพ</div>
+                    <div className="w-full h-64 flex items-center justify-center text-gray-400">ไม่มีรูปภาพ</div>
                   )}
                 </div>
 
