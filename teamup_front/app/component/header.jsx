@@ -15,7 +15,7 @@ export default function Header({ user: propUser = null, profileImage: propProfil
   const [loadingAuth, setLoadingAuth] = useState(false);
 
   useEffect(() => {
-    // ถ้ parent ส่ง user มาแล้ว ไม่ต้อง fetch
+    // ถ้า parent ส่ง user มาแล้ว ไม่ต้อง fetch
     if (propUser) return;
 
     let mounted = true;
@@ -26,7 +26,6 @@ export default function Header({ user: propUser = null, profileImage: propProfil
           credentials: "include",
         });
         if (!res.ok) {
-          // ถ้าไม่ได้ล็อกอิน ให้ไม่ทำอะไรต่อ (Header จะแสดง guest)
           if (mounted) {
             setUser(null);
             setProfileImage(null);
@@ -36,7 +35,6 @@ export default function Header({ user: propUser = null, profileImage: propProfil
         const data = await res.json();
         if (mounted) {
           setUser(data.userInfo || null);
-          // พยายามหา field รูปจากหลายชื่อที่ backend อาจคืนมา
           const img = data.userInfo?.profileImage || data.userInfo?.imageUrl || data.userInfo?.avatarUrl || null;
           setProfileImage(img);
         }
@@ -65,12 +63,11 @@ export default function Header({ user: propUser = null, profileImage: propProfil
         } catch (err) {
           console.error("Logout error:", err);
         } finally {
-          // ไปหน้า login หรือ reload
           window.location.href = "/login";
         }
       };
 
-  // ถ้ parent เปลี่ยน prop ให้ sync กลับมาที่ state
+  // sync เมื่อ parent เปลี่ยน props
   useEffect(() => {
     if (propUser !== undefined && propUser !== null) setUser(propUser);
   }, [propUser]);
@@ -95,18 +92,10 @@ export default function Header({ user: propUser = null, profileImage: propProfil
             </div>
 
             <nav className="hidden md:flex space-x-6 items-center">
-              <a href="/" className="text-gray-900 font-medium hover:text-blue-600 transition">
-                หน้าหลัก
-              </a>
-              <a href="/eventSchedule" className="text-gray-500 hover:text-gray-900 transition">
-                กิจกรรมทั้งหมด
-              </a>
+              <a href="/" className="text-gray-900 font-medium hover:text-blue-600 transition">หน้าหลัก</a>
+              <a href="/eventSchedule" className="text-gray-500 hover:text-gray-900 transition">กิจกรรมทั้งหมด</a>
 
-              <button
-                onClick={() => router.push("/groupChat")}
-                className="text-gray-500 hover:text-gray-900 transition"
-                title="ไปยังแชทของฉัน"
-              >
+              <button onClick={() => router.push("/groupChat")} className="text-gray-500 hover:text-gray-900 transition" title="ไปยังแชทของฉัน">
                 แชทของฉัน
               </button>
             </nav>
@@ -114,10 +103,7 @@ export default function Header({ user: propUser = null, profileImage: propProfil
 
           {/* --- Actions --- */}
           <div className="flex items-center space-x-4">
-            <button
-              onClick={() => router.push("/createActivity")}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105"
-            >
+            <button onClick={() => router.push("/createActivity")} className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105">
               <Plus className="w-5 h-5" />
               <span className="font-medium">สร้างกิจกรรม</span>
             </button>
@@ -146,12 +132,7 @@ export default function Header({ user: propUser = null, profileImage: propProfil
 
               {/* Logout */}
               <div className="relative">
-                <button
-                  onMouseEnter={() => setHover(true)}
-                  onMouseLeave={() => setHover(false)}
-                  onClick={handleLogout}
-                  className="ml-2 px-3 py-2 rounded-md text-red-600 border border-transparent hover:bg-red-50 transition"
-                >
+                <button onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={handleLogout} className="ml-2 px-3 py-2 rounded-md text-red-600 border border-transparent hover:bg-red-50 transition">
                   <LogOut className="w-5 h-5" />
                 </button>
               </div>
