@@ -52,7 +52,7 @@ export default function EventDetailPage() {
       }
 
       try {
-        const res = await fetch(`${API_URL}/api/event/${id}`, {
+        const res = await fetch(`${API_URL}api/eventDetail/${id}`, {
           credentials: "include",
         });
         if (!res.ok) {
@@ -91,7 +91,7 @@ export default function EventDetailPage() {
     if (!eventData) return;
     setJoining(true);
     try {
-      const res = await fetch(`${API_URL}/api/event/${eventData.id}/join`, {
+      const res = await fetch(`${API_URL}/api/eventDetail/${eventData.id}/join`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
