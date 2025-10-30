@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar, MapPin, RectangleEllipsis } from "lucide-react";
 import { useRouter } from "next/navigation";
 import MainLayout from "../component/MainLayout.jsx"
 
@@ -279,6 +279,7 @@ export default function LandingPage() {
                     <p className="text-gray-800 text-sm mb-2">{a.ownerName} • {a.location || "สถานที่ไม่ระบุ"}</p>
                     <p className="text-gray-700 text-sm flex items-center"><Calendar className="w-4 h-4 mr-2 text-blue-600" />{formatDateRange(a.start, a.end)}</p>
                     <p className="text-gray-700 text-sm flex items-center"><MapPin className="w-4 h-4 mr-2 text-blue-600" />{a.location || "-"}</p>
+                    <p className="text-gray-700 text-sm flex items-center"><RectangleEllipsis className="w-4 h-4 mr-2 text-blue-600" />{a.category|| "-"}</p>
                     <p className="text-gray-700 text-sm mt-2">ลงทะเบียนได้ถึง: {a.signupdeadline ? formatDateRange(a.signupdeadline, null) : "ไม่ระบุ"}</p>
                     <button onClick={() => router.push(`/eventDetail/${a.id}`)} className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition">ดูรายละเอียด</button>
                   </div>

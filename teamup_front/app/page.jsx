@@ -40,22 +40,6 @@ export default function Home() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(false);
-        setUserInfo(null);
-        router.push("/");
-      }
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
-  };
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
@@ -73,12 +57,6 @@ export default function Home() {
           >
             เข้าสู่ระบบ
           </button>
-                          <button
-                  onClick={handleLogout}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-200"
-                >
-                  ออกจากระบบ
-                </button>
         </div>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-gray-600">

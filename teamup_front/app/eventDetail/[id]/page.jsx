@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import MainLayout from "@/app/component/MainLayout.jsx";
 import { API_URL } from "@/lib/config";
-import { MapPin, Clock, User, ArrowLeft, Edit2 } from "lucide-react";
+import { MapPin, Clock, User, ArrowLeft, Edit2, RectangleEllipsis } from "lucide-react";
 
 function parseBangkok(dateStr) {
   if (!dateStr) return null;
@@ -76,6 +76,7 @@ export default function EventDetailPage() {
           enddate: data.enddate ?? data.end ?? "",
           time: data.time ?? "",
           location: data.location ?? data.venue ?? "ไม่ระบุสถานที่",
+          category: data.category ?? data.venue ?? "",
           imageField: data.image ?? data.photo ?? data.cover ?? "",
           description:
             data.description ?? data.detail ?? data.desc ?? "ไม่มีคำอธิบาย",
@@ -381,6 +382,13 @@ export default function EventDetailPage() {
                     <MapPin className="w-4 h-4" /> สถานที่
                   </h4>
                   <div className="text-sm">{eventData.location}</div>
+                </div>
+
+                <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <RectangleEllipsis className="w-4 h-4" /> ประเภท
+                  </h4>
+                  <div className="text-sm">{eventData.category}</div>
                 </div>
 
                 <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">

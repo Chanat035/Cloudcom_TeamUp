@@ -125,7 +125,7 @@ export default function GroupChatPage() {
 
         {activeGroup && (
           <div className="border-t p-3 flex">
-            <textarea className="flex-1 border rounded px-2 py-1 resize-none" rows={1} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="พิมพ์แล้วกด Enter เพื่อส่ง" />
+            <textarea className="flex-1 border rounded px-2 py-1 resize-none text-gray-800" rows={1} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="พิมพ์แล้วกด Enter เพื่อส่ง" />
             <button onClick={handleSend} className="ml-2 px-4 py-1 bg-blue-500 text-white rounded">ส่ง</button>
           </div>
         )}
