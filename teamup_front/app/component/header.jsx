@@ -86,6 +86,26 @@ export default function Header({
       setProfileImage(propProfileImage);
   }, [propProfileImage]);
 
+  useEffect(() => {
+  if (!user) return;
+
+  const fetchProfileImage = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/getProfile`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.imageUrl) setProfileImage(data.imageUrl);
+    } catch (err) {
+      console.error("Error loading profile image:", err);
+    }
+  };
+
+  fetchProfileImage();
+}, [user]);
+
+
   return (
     <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

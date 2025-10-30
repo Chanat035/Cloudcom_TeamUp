@@ -77,9 +77,11 @@ export default function EventDetailPage() {
           time: data.time ?? "",
           location: data.location ?? data.venue ?? "ไม่ระบุสถานที่",
           imageField: data.image ?? data.photo ?? data.cover ?? "",
-          description: data.description ?? data.detail ?? data.desc ?? "ไม่มีคำอธิบาย",
+          description:
+            data.description ?? data.detail ?? data.desc ?? "ไม่มีคำอธิบาย",
           owner: data.owner ?? data.user_id ?? data.owner_id ?? null,
-          signupdeadline: data.signupdeadline ?? data.signUpDeadline ?? data.deadline ?? null,
+          signupdeadline:
+            data.signupdeadline ?? data.signUpDeadline ?? data.deadline ?? null,
         };
 
         setEventData(normalized);
@@ -101,7 +103,9 @@ export default function EventDetailPage() {
         // 3) load owner display name (if owner id available)
         if (normalized.owner) {
           try {
-            const uRes = await fetch(`${API_URL}/api/user/${encodeURIComponent(normalized.owner)}`);
+            const uRes = await fetch(
+              `${API_URL}/api/user/${encodeURIComponent(normalized.owner)}`
+            );
             if (uRes.ok) {
               const uJson = await uRes.json();
               setOwnerName(uJson.name || "ไม่ระบุ");
@@ -117,9 +121,12 @@ export default function EventDetailPage() {
 
         // 4) check participant status (joined) — endpoint: /api/eventDetail/:id/checkParticipant
         try {
-          const pRes = await fetch(`${API_URL}/api/eventDetail/${id}/checkParticipant`, {
-            credentials: "include",
-          });
+          const pRes = await fetch(
+            `${API_URL}/api/eventDetail/${id}/checkParticipant`,
+            {
+              credentials: "include",
+            }
+          );
           if (pRes.ok) {
             const pJson = await pRes.json();
             setJoined(Boolean(pJson.joined));
@@ -132,19 +139,34 @@ export default function EventDetailPage() {
 
         // 5) check if current user is organizer:
         try {
-          const participantsRes = await fetch(`${API_URL}/api/activity/${id}/participants`, {
-            credentials: "include",
-          });
+          const participantsRes = await fetch(
+            `${API_URL}/api/activity/${id}/participants`,
+            {
+              credentials: "include",
+            }
+          );
           if (participantsRes.ok) {
             const parts = await participantsRes.json();
-            const meIsOrganizer = parts.some((r) => r.role === "organizer" && (r.name === (r.name || "") && r.user_id && r.user_id === r.user_id ? true : false));
+            const meIsOrganizer = parts.some(
+              (r) =>
+                r.role === "organizer" &&
+                (r.name === (r.name || "") &&
+                r.user_id &&
+                r.user_id === r.user_id
+                  ? true
+                  : false)
+            );
             // Above is conservative (we can't access session id here). Instead derive organizer by matching owner id:
             const ownerId = normalized.owner;
             if (ownerId) {
-              const foundOrganizerRecord = parts.find((r) => r.role === "organizer" && r.user_id === ownerId);
+              const foundOrganizerRecord = parts.find(
+                (r) => r.role === "organizer" && r.user_id === ownerId
+              );
               if (foundOrganizerRecord) {
                 try {
-                  const sRes = await fetch(`${API_URL}/api/auth/status`, { credentials: "include" });
+                  const sRes = await fetch(`${API_URL}/api/auth/status`, {
+                    credentials: "include",
+                  });
                   if (sRes.ok) {
                     const sJson = await sRes.json();
                     const sessionSub = sJson.userInfo?.sub;
@@ -188,12 +210,15 @@ export default function EventDetailPage() {
     if (!eventData) return;
     setJoining(true);
     try {
-      const res = await fetch(`${API_URL}/api/eventDetail/${eventData.id}/join`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
+      const res = await fetch(
+        `${API_URL}/api/eventDetail/${eventData.id}/join`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`${res.status} ${res.statusText} - ${t}`);
@@ -212,10 +237,13 @@ export default function EventDetailPage() {
     if (!eventData) return;
     if (!confirm("ต้องการออกจากกิจกรรมใช่หรือไม่?")) return;
     try {
-      const res = await fetch(`${API_URL}/api/eventDetail/${eventData.id}/cancel`, {
-        method: "PUT",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_URL}/api/eventDetail/${eventData.id}/cancel`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
+      );
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`${res.status} ${res.statusText} - ${t}`);
@@ -262,10 +290,18 @@ export default function EventDetailPage() {
 
   // 24-hour time format: use hour12:false
   const startTime = start
-    ? start.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })
+    ? start.toLocaleTimeString("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
     : "";
   const endTime = end
-    ? end.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })
+    ? end.toLocaleTimeString("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
     : "";
 
   return (
@@ -282,7 +318,9 @@ export default function EventDetailPage() {
           <div className="bg-white/80 rounded-xl shadow-lg overflow-hidden">
             {/* Hero */}
             <div className="bg-gradient-to-r from-pink-500 to-pink-400 p-6">
-              <h1 className="text-3xl font-bold text-white">{eventData.name}</h1>
+              <h1 className="text-3xl font-bold text-white">
+                {eventData.name}
+              </h1>
               <p className="text-sm text-pink-100 mt-1">
                 {dateStr}
                 {start ? ` · ${startTime}` : ""}
@@ -308,55 +346,89 @@ export default function EventDetailPage() {
                       }}
                     />
                   ) : (
-                    <div className="w-full h-64 flex items-center justify-center text-gray-400">ไม่มีรูปภาพ</div>
+                    <div className="w-full h-64 flex items-center justify-center text-gray-400">
+                      ไม่มีรูปภาพ
+                    </div>
                   )}
                 </div>
 
                 <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
                   <h3 className="font-semibold mb-2">รายละเอียด</h3>
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{eventData.description}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">
+                    {eventData.description}
+                  </p>
                 </div>
               </div>
 
               <aside className="space-y-4">
                 <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2"><Clock className="w-4 h-4" /> วันที่ & เวลา</h4>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> วันที่ & เวลา
+                  </h4>
                   <div className="text-sm">
                     <div>{dateStr}</div>
                     {start && (
-                      <div>{startTime}{end ? ` - ${endTime}` : ""}</div>
+                      <div>
+                        {startTime}
+                        {end ? ` - ${endTime}` : ""}
+                      </div>
                     )}
                   </div>
                 </div>
 
                 <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="w-4 h-4" /> สถานที่</h4>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" /> สถานที่
+                  </h4>
                   <div className="text-sm">{eventData.location}</div>
                 </div>
 
                 <div className="rounded-lg p-4 bg-white/70 border border-gray-100 text-gray-900">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2"><User className="w-4 h-4" /> ผู้จัด</h4>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <User className="w-4 h-4" /> ผู้จัด
+                  </h4>
                   <div className="text-sm">{ownerName || "ไม่ระบุ"}</div>
                 </div>
 
                 <div className="flex gap-2">
-                  {/* If organizer -> show Edit */}
                   {isOrganizer ? (
-                    <button onClick={handleEdit} className="flex-1 px-4 py-2 rounded shadow-sm bg-white border border-gray-200 text-gray-900 flex items-center gap-2 hover:bg-gray-50">
+                    // Organizer -> show Edit button
+                    <button
+                      onClick={handleEdit}
+                      className="flex-1 px-4 py-2 rounded shadow-sm bg-white border border-gray-200 text-gray-900 flex items-center gap-2 hover:bg-gray-50"
+                    >
                       <Edit2 className="w-4 h-4" /> แก้ไขรายละเอียด
                     </button>
                   ) : (
                     <>
-                      {joined ? (
+                      {/* ตรวจว่าหมดเขตสมัครหรือยัง */}
+                      {eventData.signupdeadline &&
+                      new Date(eventData.signupdeadline) < new Date() ? (
+                        // ❌ หมดเขตสมัครแล้ว
+                        <button
+                          disabled
+                          className="flex-1 px-4 py-2 rounded shadow-sm bg-gray-200 text-gray-500 cursor-not-allowed"
+                        >
+                          ปิดรับสมัคร
+                        </button>
+                      ) : joined ? (
+                        // ✅ ผู้ใช้เข้าร่วมแล้ว
                         <>
-                          <button disabled className="flex-1 px-4 py-2 rounded shadow-sm bg-gray-200 text-gray-700">
+                          <button
+                            disabled
+                            className="flex-1 px-4 py-2 rounded shadow-sm bg-gray-200 text-gray-700"
+                          >
                             เข้าร่วมแล้ว
                           </button>
-                          <button onClick={handleCancel} className="px-4 py-2 rounded shadow-sm bg-white border border-gray-200 text-gray-900">
+                          <button
+                            onClick={handleCancel}
+                            className="px-4 py-2 rounded shadow-sm bg-white border border-gray-200 text-gray-900"
+                          >
                             ออกจากกิจกรรม
                           </button>
                         </>
                       ) : (
+                        // 🔘 ยังไม่เข้าร่วมและยังไม่หมดเขต
                         <button
                           onClick={handleJoin}
                           disabled={joining}
@@ -372,10 +444,13 @@ export default function EventDetailPage() {
                 {eventData.signupdeadline && (
                   <div className="text-sm text-gray-600 mt-2">
                     ลงทะเบียนได้ถึง:{" "}
-                    {parseBangkok(eventData.signupdeadline).toLocaleString("th-TH", {
-                      dateStyle: "long",
-                      timeStyle: "short",
-                    })}
+                    {parseBangkok(eventData.signupdeadline).toLocaleString(
+                      "th-TH",
+                      {
+                        dateStyle: "long",
+                        timeStyle: "short",
+                      }
+                    )}
                   </div>
                 )}
               </aside>
