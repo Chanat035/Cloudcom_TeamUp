@@ -98,7 +98,6 @@ export default function Header({ user, profileImage, onLogout }) {
                 </button>
                 {hover && (
                   <div className="absolute right-0 mt-2 bg-black text-white text-xs rounded px-2 py-1">
-                    กำลัง hover ปุ่มออกจากระบบ
                   </div>
                 )}
               </div>
