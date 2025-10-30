@@ -52,7 +52,7 @@ export default function EventDetailPage() {
       }
 
       try {
-        const res = await fetch(`${API_URL}api/eventDetail/${id}`, {
+        const res = await fetch(`${API_URL}/api/eventDetail/${id}`, {
           credentials: "include",
         });
         if (!res.ok) {
