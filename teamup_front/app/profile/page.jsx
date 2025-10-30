@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import Header from "../component/header.jsx";
+import MainLayout from "@/components/MainLayout";
 
 
 const ProfilePage = () => {
@@ -202,8 +202,8 @@ const ProfilePage = () => {
     "https://teamupbucket035.s3.ap-southeast-2.amazonaws.com/user/Default-Profile/user-128.png";
 
   return (
+    <MainLayout>
     <div className="flex min-h-screen bg-gray-100 p-8 font-sans">
-      <Header />
       <div className="flex flex-col md:flex-row w-full max-w-7xl mx-auto">
         {/* Left Section */}
         <div className="flex-1 flex flex-col items-start p-4">
@@ -518,6 +518,7 @@ const ProfilePage = () => {
         </div>
       )}
     </div>
+  </MainLayout>
   );
 };
 

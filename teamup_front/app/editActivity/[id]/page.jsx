@@ -8,7 +8,7 @@ import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import Header from "@/app/component/header.jsx";
+import MainLayout from "@/components/MainLayout";
 
 export default function EditActivityPage() {
   const { id } = useParams();
@@ -303,8 +303,8 @@ export default function EditActivityPage() {
   }
 
   return (
+    <MainLayout>
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12 px-4">
-      <Header />
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-12">
@@ -619,5 +619,6 @@ export default function EditActivityPage() {
         </div>
       </div>
     </div>
+  </MainLayout>
   );
 }

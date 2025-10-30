@@ -13,7 +13,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import Header from "../component/header.jsx";
+import MainLayout from "@/components/MainLayout";
 
 
 const EventsCalendar = () => {
@@ -247,8 +247,8 @@ const EventsCalendar = () => {
     return <div className="text-white">Checking authentication...</div>;
 
   return (
+  <MainLayout>
     <div className="max-w-6xl mx-auto p-6 bg-black text-white">
-      <Header />
       {/* Header */}
       <div className="text-center mb-4">
         <div className="flex items-center justify-center mb-4">
@@ -429,6 +429,7 @@ const EventsCalendar = () => {
           </div>
         )}
     </div>
+  </MainLayout>
   );
 };
 

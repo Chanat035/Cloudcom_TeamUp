@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Header from "../component/header.jsx";
+import MainLayout from "@/components/MainLayout";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3100";
 
@@ -251,9 +251,8 @@ export default function LandingPage() {
   if (loading) return <div className="flex justify-center items-center h-screen">กำลังโหลด...</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <Header user={user} profileImage={profileImage} onLogout={handleLogout} />
-
+    <MainLayout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <main className="max-w-7xl mx-auto px-4 py-8">
         <h2 className="text-3xl font-bold mb-1 text-gray-900">สวัสดี, {user?.name?.split(" ")[0] || "ผู้ใช้"} 👋</h2>
         <p className="text-gray-800 mb-6">มีกิจกรรมดีๆ รออยู่ — ค้นหาและเข้าร่วมได้ง่าย ๆ</p>
@@ -321,5 +320,6 @@ export default function LandingPage() {
         </div>
       </main>
     </div>
+  </MainLayout>
   );
 }

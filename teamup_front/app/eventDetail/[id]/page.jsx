@@ -13,7 +13,7 @@ import {
   Tag,
 } from "lucide-react";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import Header from "@/app/component/header.jsx";
+import MainLayout from "@/components/MainLayout";
 
 
 const EventDetail = () => {
@@ -191,9 +191,8 @@ const EventDetail = () => {
   }
 
   return (
+    <MainLayout>
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <Header />
 
       {/* ✅ Container รูปภาพกิจกรรม: ขนาด 520x520 พิกเซล พร้อมปรับรูปให้พอดี */}
       <div className="max-w-6xl mx-auto px-6 py-4">
@@ -307,6 +306,7 @@ const EventDetail = () => {
         </div>
       </div>
     </div>
+  </MainLayout>
   );
 };
 

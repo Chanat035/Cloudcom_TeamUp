@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import Header from "../component/header.jsx";
+import MainLayout from "@/components/MainLayout";
 
 export default function GroupChatPage() {
   const [groups, setGroups] = useState([]);
@@ -93,9 +93,10 @@ export default function GroupChatPage() {
   }
 
   return (
+    <MainLayout>
     <div className="flex h-screen border">
       {/* ไม่ต้องส่ง user ให้ Header (Header จะ fetch เอง) */}
-      <Header />
+      
 
       <div className="w-1/4 border-r p-2">
         <h2 className="font-bold mb-2">กลุ่มทั้งหมดที่เข้าร่วม</h2>
@@ -133,5 +134,6 @@ export default function GroupChatPage() {
         )}
       </div>
     </div>
+  </MainLayout>
   );
 }
