@@ -1,4 +1,3 @@
-// app/home/page.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -20,7 +19,7 @@ const CATEGORIES = [
   "อื่นๆ",
 ];
 
-/* ---------- utils (เดิม) ---------- */
+/* ---------- utils ---------- */
 function pickDate(obj, keys = []) {
   for (const k of keys) {
     if (!obj) continue;
@@ -221,14 +220,16 @@ export default function LandingPage() {
     <MainLayout>
       <div className="page-bg">
         <main className="max-w-7xl mx-auto px-6 py-10">
-          {/* HERO: playful + soft gradient motion */}
+          {/* HERO */}
           <section className="hero">
             <div className="hero-overlay" />
             <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900">
-              สวัสดี, <span className="font-extrabold">{user?.name?.split(" ")[0] || "ผู้ใช้"}</span> 👋
+              ยินดีต้อนรับสู่ <span className="font-extrabold">TeamUp</span> 💫
             </h2>
-            <p className="mt-2 text-lg text-neutral-800">
-              ส่งเสริมนักศึกษา KMITL ให้ค้นหา ผูกพัน และก้าวหน้าไปกับทุกกิจกรรมในแคมปัส‼ ✩
+            <p className="mt-2 text-lg text-neutral-800 leading-relaxed">
+              ค้นหาแรงบันดาลใจใหม่ ๆ ในแคมปัสของคุณ 💫
+              <br className="hidden sm:block" />
+              เข้าร่วมกิจกรรมที่ใช่ และสร้างความทรงจำไปกับเพื่อน ๆ ที่ TeamUp!
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-4">
@@ -270,7 +271,6 @@ export default function LandingPage() {
                 <article key={a.id} className="card hover:-translate-y-1" style={{animationDelay:`${i*70}ms`}}>
                   <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
                     <div className="relative sm:w-56 overflow-hidden rounded-2xl sm:rounded-xl">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={a.imageUrl} alt={a.title} className="h-48 w-full sm:h-full object-cover img-zoom" />
                       <span className="shine" />
                     </div>
@@ -310,15 +310,18 @@ export default function LandingPage() {
 
             {/* sidebar */}
             <aside className="space-y-6">
-              <div className="card">
+              <div className="card overflow-visible">
                 <h3 className="text-lg font-semibold text-neutral-900 mb-4">กิจกรรมที่จะปิดรับภายใน 10 วัน</h3>
                 {activities
                   .filter(a => a.signupdeadline && (a.signupdeadline > new Date()) && ((a.signupdeadline - new Date()) < 10*24*60*60*1000))
                   .sort((x,y) => new Date(x.signupdeadline) - new Date(y.signupdeadline))
                   .slice(0,3)
                   .map(ev => (
-                    <div key={ev.id} onClick={() => router.push(`/eventDetail/${ev.id}`)}
-                         className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#FFF3EA] cursor-pointer transition">
+                    <div
+                      key={ev.id}
+                      onClick={() => router.push(`/eventDetail/${ev.id}`)}
+                      className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#FFF3EA] cursor-pointer transition"
+                    >
                       <div className="w-10 h-10 rounded-lg bg-[#E35205] flex items-center justify-center shadow-soft">
                         <Calendar className="w-5 h-5 text-white" />
                       </div>
@@ -331,7 +334,7 @@ export default function LandingPage() {
               </div>
 
               {Array.isArray(interests) && interests.length > 0 && (
-                <div className="card">
+                <div className="card overflow-visible">
                   <h3 className="text-lg font-semibold text-neutral-900 mb-3">ความสนใจของคุณ</h3>
                   <div className="flex flex-wrap gap-2">
                     {interests.map((i) => (
@@ -345,22 +348,19 @@ export default function LandingPage() {
         </main>
       </div>
 
-      {/* global font + animations */}
       <StyleBlock />
     </MainLayout>
   );
 }
 
-/* ---------- global styles & keyframes (รวมทุกอย่างไว้ไฟล์เดียว) ---------- */
+/* ---------- styles ---------- */
 function StyleBlock() {
   return (
     <style jsx global>{`
-      /* Google Font: IBM Plex Sans Thai Looped */
       @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
-      html, body { font-family: 'IBM Plex Sans Thai Looped', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Thai', sans-serif; }
+      html, body { font-family: 'IBM Plex Sans Thai Looped', sans-serif; }
 
-      /* playful soft gradient bg (เคลื่อนไหว) */
-      .page-bg{
+      .page-bg {
         --c1:#FFF3E9; --c2:#FFFDF9; --c3:#FFE7D6;
         background: radial-gradient(1200px 600px at 15% -10%, var(--c3) 0, var(--c2) 45%, var(--c1) 70%);
         background-size: 160% 160%;
@@ -372,82 +372,20 @@ function StyleBlock() {
         100%{ background-position: 0% 50% }
       }
 
-      /* HERO */
-      .hero{
-        position:relative; overflow:hidden;
+      .hero {
+        position: relative;
+        overflow: hidden;
         border-radius: 24px;
-        padding: 24px 20px;
+        padding: 28px 24px;
         background: linear-gradient(120deg, #FFD0A6, #FF944D, #E35205);
         background-size: 220% 220%;
-        animation: heroFlow 12s ease-in-out infinite, floatSoft 8s ease-in-out infinite;
+        animation: heroFlow 12s ease-in-out infinite;
         box-shadow: 0 18px 50px rgba(227,82,5,.18);
       }
-      @media (min-width: 640px){ .hero{ padding: 32px 28px; } }
-      .hero-overlay{
-        position:absolute; inset:0; pointer-events:none;
+      .hero-overlay {
+        position: absolute;
+        inset: 0;
         background: radial-gradient(600px 220px at 65% 55%, rgba(255,255,255,.55), transparent 60%);
-        mix-blend-mode: screen; filter: blur(2px);
-        animation: glowShift 10s ease-in-out infinite;
-      }
-      @keyframes heroFlow{
-        0%{ background-position: 0% 50% }
-        50%{ background-position: 100% 50% }
-        100%{ background-position: 0% 50% }
-      }
-      @keyframes glowShift{
-        0%,100%{ transform: translateX(0) translateY(0) }
-        50%{ transform: translateX(-10px) translateY(6px) }
-      }
-      @keyframes floatSoft{ 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
-
-      /* Components */
-      .card{
-        border-radius: 24px;
-        background: rgba(255,255,255,.94);
-        border: 1px solid rgba(0,0,0,.05);
-        backdrop-filter: blur(6px);
-        box-shadow: 0 10px 28px rgba(0,0,0,.06);
-        transition: transform .28s ease, box-shadow .28s ease;
-        animation: fadeUp .6s both;
-        overflow: hidden;
-      }
-      .shadow-soft{ box-shadow: 0 8px 22px rgba(0,0,0,.06); }
-      .badge{
-        display:inline-block; border-radius:9999px;
-        padding:.25rem .75rem; font-size:.75rem; font-weight:600;
-        color:#E35205; background:rgba(227,82,5,.12); border:1px solid rgba(227,82,5,.3);
-      }
-      .btn-primary{
-        margin-top:1rem; display:inline-flex; align-items:center; justify-content:center;
-        padding:.625rem 1.25rem; border-radius:9999px; color:#fff; background:#E35205;
-        box-shadow:0 8px 22px rgba(227,82,5,.35); transition:transform .15s ease, filter .2s ease, box-shadow .2s ease;
-        animation: pulseSoft 2.8s ease-in-out infinite;
-      }
-      .btn-primary:hover{ filter:brightness(.97); box-shadow:0 12px 28px rgba(227,82,5,.45); }
-      .btn-primary:active{ transform:scale(.98); }
-
-      /* image hover fun */
-      .img-zoom{ transition: transform .6s cubic-bezier(.2,.6,.2,1); }
-      .card:hover .img-zoom{ transform: scale(1.04) rotate(.2deg); }
-      .shine{
-        position:absolute; top:-20%; left:-60%; width:50%; height:140%;
-        background: linear-gradient(120deg, rgba(255,255,255,.0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,.0) 100%);
-        transform: skewX(-20deg); filter: blur(6px); opacity:0;
-        animation: none; pointer-events:none;
-      }
-      .card:hover .shine{ animation: sweep 1.2s ease forwards; }
-      @keyframes sweep{ 0%{ left:-60%; opacity:0 } 20%{ opacity:.6 } 100%{ left:120%; opacity:0 } }
-
-      /* skeleton & keyframes */
-      .skeleton{
-        border-radius: 16px;
-        background: linear-gradient(90deg, #eee 25%, #fafafa 37%, #eee 63%);
-        background-size: 400% 100%;
-        animation: shimmer 1.4s ease-in-out infinite;
-      }
-      @keyframes shimmer { 0%{background-position: 100% 0} 100%{background-position: -100% 0} }
-      @keyframes fadeUp { from{opacity:0; transform: translateY(8px)} to{opacity:1; transform: translateY(0)} }
-      @keyframes pulseSoft { 0%,100%{ box-shadow:0 8px 22px rgba(227,82,5,.35) } 50%{ box-shadow:0 10px 30px rgba(227,82,5,.45) } }
-    `}</style>
-  );
-}
+        mix-blend-mode: screen;
+        filter: blur(2px);
+        animation: glowShift 10s ease-in

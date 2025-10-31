@@ -1,4 +1,4 @@
-// createActivity
+// app/createActivity/page.jsx
 
 "use client";
 
@@ -6,8 +6,14 @@ import React, { useState, useEffect } from "react";
 import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import "react-clock/dist/Clock.css";
-import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
-import MainLayout from "../component/MainLayout.jsx"
+import {
+  API_URL,
+  FRONTEND_URL,
+  COGNITO_DOMAIN,
+  COGNITO_CLIENT_ID,
+  OAUTH_REDIRECT_URI,
+} from "@/lib/config";
+import MainLayout from "../component/MainLayout.jsx";
 
 export default function CreateActivityPage() {
   const [formData, setFormData] = useState({
@@ -179,7 +185,6 @@ export default function CreateActivityPage() {
       }
 
       alert("สร้างกิจกรรมสำเร็จ! 🎉");
-      console.log("Created activity with ID:", activityId);
 
       setFormData({
         activityName: "",
@@ -231,317 +236,293 @@ export default function CreateActivityPage() {
   };
 
   if (!userInfo) {
-    return <div>กำลังโหลด...</div>;
+    return <div className="p-6 text-neutral-700">กำลังโหลด...</div>;
   }
 
   return (
     <MainLayout>
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12 px-4">
-      <div className="max-w-5xl mx-auto">
-        {/* User Info */}
-        <div className="text-right mb-4">
-          <span className="text-sm text-gray-600">
-            ผู้ใช้: {userInfo.name || "ไม่ระบุ"} |
-            <a
-              href={`${API_URL}/logout`}
-              className="ml-2 text-blue-600 hover:underline"
-            >
-              ออกจากระบบ
-            </a>
-          </span>
-        </div>
+      <div className="page-bg min-h-[calc(100vh-80px)]">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <header className="text-center mb-10">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-neutral-900">
+              สร้างกิจกรรมใหม่
+            </h1>
+            <p className="mt-2 text-neutral-700">
+              กรอกข้อมูลกิจกรรมของคุณให้ครบถ้วน เพื่อให้เพื่อน ๆ ค้นหาและเข้าร่วมได้ง่าย
+            </p>
+          </header>
 
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-            สร้างกิจกรรมใหม่
-          </h1>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            กรอกข้อมูลกิจกรรมของคุณให้ครบถ้วน
-            เพื่อให้ผู้สนใจได้รับทราบรายละเอียดที่ชัดเจน
-          </p>
-        </div>
-
-        {/* Main Form Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          <div className="p-8 md:p-12">
-            <div className="space-y-8">
-              {/* Activity Name */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-3">
-                  ชื่อกิจกรรม *
-                </label>
-                <input
-                  type="text"
-                  name="activityName"
-                  value={formData.activityName}
-                  onChange={handleInputChange}
-                  className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                    errors.activityName
-                      ? "border-red-400 bg-red-50"
-                      : "border-gray-200 focus:border-purple-400 bg-white"
-                  }`}
-                  placeholder="ใส่ชื่อกิจกรรมที่น่าสนใจ"
-                />
-                {errors.activityName && (
-                  <p className="text-red-500 text-sm mt-2 flex items-center">
-                    <span className="mr-1">⚠️</span> {errors.activityName}
-                  </p>
-                )}
-              </div>
-
-              {/* ... (existing fields) */}
-
-              {/* New: Activity Image */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-3">
-                  รูปภาพกิจกรรม
-                </label>
-                <input
-                  type="file"
-                  name="activityImage"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black border-gray-200 focus:border-purple-400 bg-white`}
-                />
-              </div>
-
-              {/* Category and Location Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
+            <section className="card p-6 md:p-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    หมวดหมู่ *
-                  </label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20  placeholder-gray-400 text-black ${
-                      errors.category
-                        ? "border-red-400 bg-red-50"
-                        : "border-gray-200 focus:border-purple-400 bg-white"
-                    }`}
-                  >
-                    <option value="">เลือกหมวดหมู่กิจกรรม</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.category && (
-                    <p className="text-red-500 text-sm mt-2 flex items-center">
-                      <span className="mr-1">⚠️</span> {errors.category}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    สถานที่ *
+                  <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                    ชื่อกิจกรรม *
                   </label>
                   <input
                     type="text"
-                    name="location"
-                    value={formData.location}
+                    name="activityName"
+                    value={formData.activityName}
                     onChange={handleInputChange}
-                    className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 placeholder-gray-400 text-black ${
-                      errors.location
-                        ? "border-red-400 bg-red-50"
-                        : "border-gray-200 focus:border-purple-400 bg-white"
-                    }`}
-                    placeholder="สถานที่จัดกิจกรรม"
+                    placeholder="ใส่ชื่อกิจกรรมที่น่าสนใจ"
+                    className={`w-full px-4 py-3 rounded-2xl border ${
+                      errors.activityName ? "border-red-400 bg-red-50" : "border-black/10 bg-white"
+                    } focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900`}
                   />
-                  {errors.location && (
-                    <p className="text-red-500 text-sm mt-2 flex items-center">
-                      <span className="mr-1">⚠️</span> {errors.location}
-                    </p>
+                  {errors.activityName && (
+                    <p className="text-red-500 text-sm mt-1">{errors.activityName}</p>
                   )}
                 </div>
-              </div>
 
-              {/* Date Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Start Date + Time */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                      หมวดหมู่ *
+                    </label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 rounded-2xl border ${
+                        errors.category ? "border-red-400 bg-red-50" : "border-black/10 bg-white"
+                      } focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900`}
+                    >
+                      <option value="">เลือกหมวดหมู่กิจกรรม</option>
+                      {categories.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.category && (
+                      <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                      สถานที่ *
+                    </label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      placeholder="สถานที่จัดกิจกรรม"
+                      className={`w-full px-4 py-3 rounded-2xl border ${
+                        errors.location ? "border-red-400 bg-red-50" : "border-black/10 bg-white"
+                      } focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900`}
+                    />
+                    {errors.location && (
+                      <p className="text-red-500 text-sm mt-1">{errors.location}</p>
+                    )}
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    วันที่เริ่มต้น *
+                  <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                    รูปภาพกิจกรรม
                   </label>
                   <input
-                    type="date"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
-                  />
-                  <TimePicker
-                    onChange={(value) =>
-                      handleInputChange({
-                        target: { name: "startTime", value: value || "" },
-                      })
-                    }
-                    value={formData.startTime || ""}
-                    disableClock
-                    format="HH:mm"
-                    clearIcon={null}
-                    className="custom-timepicker w-full mt-2"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900"
                   />
                 </div>
 
-                {/* End Date + Time */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    วันที่สิ้นสุด *
-                  </label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
-                  />
-                  <TimePicker
-                    onChange={(value) =>
-                      handleInputChange({
-                        target: { name: "endTime", value: value || "" },
-                      })
-                    }
-                    value={formData.endTime || ""}
-                    disableClock
-                    format="HH:mm"
-                    clearIcon={null}
-                    className="custom-timepicker w-full mt-2"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                      วันที่เริ่มต้น *
+                    </label>
+                    <input
+                      type="date"
+                      name="startDate"
+                      value={formData.startDate}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900"
+                    />
+                    <TimePicker
+                      onChange={(v) =>
+                        handleInputChange({ target: { name: "startTime", value: v || "" } })
+                      }
+                      value={formData.startTime || ""}
+                      disableClock
+                      format="HH:mm"
+                      clearIcon={null}
+                      className="custom-timepicker w-full mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                      วันที่สิ้นสุด *
+                    </label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={formData.endDate}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900"
+                    />
+                    <TimePicker
+                      onChange={(v) =>
+                        handleInputChange({ target: { name: "endTime", value: v || "" } })
+                      }
+                      value={formData.endTime || ""}
+                      disableClock
+                      format="HH:mm"
+                      clearIcon={null}
+                      className="custom-timepicker w-full mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                      วันปิดรับสมัคร *
+                    </label>
+                    <input
+                      type="date"
+                      name="signUpDeadline"
+                      value={formData.signUpDeadline}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-white focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900"
+                    />
+                    <TimePicker
+                      onChange={(v) =>
+                        handleInputChange({
+                          target: { name: "signUpDeadlineTime", value: v || "" },
+                        })
+                      }
+                      value={formData.signUpDeadlineTime || ""}
+                      disableClock
+                      format="HH:mm"
+                      clearIcon={null}
+                      className="custom-timepicker w-full mt-2"
+                    />
+                  </div>
                 </div>
 
-                {/* SignUp Deadline + Time */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-3">
-                    วันปิดรับสมัคร *
+                  <label className="block text-sm font-semibold text-neutral-900 mb-2">
+                    รายละเอียดกิจกรรม *
                   </label>
-                  <input
-                    type="date"
-                    name="signUpDeadline"
-                    value={formData.signUpDeadline}
+                  <textarea
+                    name="description"
+                    value={formData.description}
                     onChange={handleInputChange}
-                    className="w-full px-6 py-4 text-black rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/20"
+                    rows={6}
+                    placeholder="บรรยายรายละเอียดกิจกรรม วัตถุประสงค์ และข้อมูลสำคัญอื่น ๆ..."
+                    className={`w-full px-4 py-3 rounded-2xl border ${
+                      errors.description ? "border-red-400 bg-red-50" : "border-black/10 bg-white"
+                    } focus:outline-none focus:ring-2 focus:ring-[#E35205]/30 text-neutral-900 resize-none`}
                   />
-                  <TimePicker
-                    onChange={(value) =>
-                      handleInputChange({
-                        target: {
-                          name: "signUpDeadlineTime",
-                          value: value || "",
-                        },
-                      })
-                    }
-                    value={formData.signUpDeadlineTime || ""}
-                    disableClock
-                    format="HH:mm"
-                    clearIcon={null}
-                    className="custom-timepicker w-full mt-2"
-                  />
+                  {errors.description && (
+                    <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`btn-primary ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {isLoading ? "⏳ กำลังบันทึก..." : "🎉 บันทึกกิจกรรม"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={isLoading}
+                    className="px-6 py-3 rounded-2xl bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition"
+                  >
+                    🔄 ล้างข้อมูล
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <aside className="card p-6 h-fit">
+              <h3 className="text-lg font-semibold text-neutral-900 mb-3">
+                📝 ข้อมูลที่กรอก (สรุป)
+              </h3>
+              <div className="space-y-3 text-sm text-neutral-800">
+                <div><b>ชื่อกิจกรรม:</b> {formData.activityName || "-"}</div>
+                <div><b>หมวดหมู่:</b> {formData.category || "-"}</div>
+                <div><b>สถานที่:</b> {formData.location || "-"}</div>
+                <div className="border-t border-black/5 pt-3">
+                  <div><b>ปิดรับสมัคร:</b>{" "}
+                    {formatDate(formData.signUpDeadline + "T" + formData.signUpDeadlineTime)}
+                  </div>
+                  <div><b>เริ่ม:</b>{" "}
+                    {formatDate(formData.startDate + "T" + formData.startTime)}
+                  </div>
+                  <div><b>สิ้นสุด:</b>{" "}
+                    {formatDate(formData.endDate + "T" + formData.endTime)}
+                  </div>
                 </div>
               </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-3">
-                  รายละเอียดกิจกรรม *
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows="6"
-                  className={`w-full px-6 py-4 rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-500/20 resize-none placeholder-gray-400 text-black ${
-                    errors.description
-                      ? "border-red-400 bg-red-50"
-                      : "border-gray-200 focus:border-purple-400 bg-white"
-                  }`}
-                  placeholder="บรรยายรายละเอียดกิจกรรม วัตถุประสงค์ กิจกรรมที่จะทำ และข้อมูลสำคัญอื่นๆ..."
-                />
-                {errors.description && (
-                  <p className="text-red-500 text-sm mt-2 flex items-center">
-                    <span className="mr-1">⚠️</span> {errors.description}
-                  </p>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 pt-8">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  className={`flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 hover:shadow-xl transition-all duration-300 ${
-                    isLoading
-                      ? "opacity-50 cursor-not-allowed transform-none"
-                      : ""
-                  }`}
-                >
-                  {isLoading ? "⏳ กำลังบันทึก..." : "🎉 บันทึกกิจกรรม"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  disabled={isLoading}
-                  className={`flex-none bg-gray-100 text-gray-700 px-8 py-4 rounded-2xl font-bold hover:bg-gray-200 hover:shadow-lg transition-all duration-300 ${
-                    isLoading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  🔄 ล้างข้อมูล
-                </button>
-              </div>
-            </div>
+              {activityImage && (
+                <div className="mt-4 text-sm text-neutral-700">
+                  <b>ไฟล์รูปภาพ:</b> {activityImage.name}
+                </div>
+              )}
+            </aside>
           </div>
         </div>
-
-        {/* Summary Card */}
-        {(formData.activityName || formData.category || formData.location) && (
-          <div className="mt-8 bg-white/60 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">
-              📝 ข้อมูลที่กรอก
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div className="space-y-3 text-black">
-                <div>
-                  <strong>ชื่อกิจกรรม:</strong> {formData.activityName || "-"}
-                </div>
-                <div>
-                  <strong>หมวดหมู่:</strong> {formData.category || "-"}
-                </div>
-                <div>
-                  <strong>สถานที่:</strong> {formData.location || "-"}
-                </div>
-                <div>
-                  <strong>รายละเอียด:</strong>{" "}
-                  {formData.description
-                    ? `${formData.description.substring(0, 50)}...`
-                    : "-"}
-                </div>
-              </div>
-              <div className="space-y-3 text-black">
-                <div>
-                  <strong>วันที่ปิดรับสมัคร:</strong>{" "}
-                  {formatDate(
-                    formData.signUpDeadline + "T" + formData.signUpDeadlineTime
-                  )}
-                </div>
-                <div>
-                  <strong>วันที่เริ่มต้น:</strong>{" "}
-                  {formatDate(formData.startDate + "T" + formData.startTime)}
-                </div>
-                <div>
-                  <strong>วันที่สิ้นสุด:</strong>{" "}
-                  {formatDate(formData.endDate + "T" + formData.endTime)}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
-  </MainLayout>
+
+      <StyleBlock />
+    </MainLayout>
+  );
+}
+
+function StyleBlock() {
+  return (
+    <style jsx global>{`
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+      html, body { font-family: 'IBM Plex Sans Thai Looped', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Thai', sans-serif; }
+
+      .page-bg{
+        --c1:#FFF3E9; --c2:#FFFDF9; --c3:#FFE7D6;
+        background: radial-gradient(1200px 600px at 15% -10%, var(--c3) 0, var(--c2) 45%, var(--c1) 70%);
+        background-size: 160% 160%;
+        animation: bgShift 24s ease-in-out infinite;
+      }
+      @keyframes bgShift {
+        0%{ background-position: 0% 50% }
+        50%{ background-position: 100% 50% }
+        100%{ background-position: 0% 50% }
+      }
+
+      .card{
+        border-radius: 24px;
+        background: rgba(255,255,255,.94);
+        border: 1px solid rgba(0,0,0,.05);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 10px 28px rgba(0,0,0,.06);
+      }
+
+      .btn-primary{
+        display:inline-flex; align-items:center; justify-content:center;
+        padding:.875rem 1.25rem; border-radius:16px; color:#fff;
+        background: linear-gradient(120deg,#FF944D,#E35205);
+        box-shadow:0 10px 24px rgba(227,82,5,.28);
+        transition:transform .15s ease, filter .2s ease, box-shadow .2s ease;
+      }
+      .btn-primary:hover{ filter:brightness(.98); box-shadow:0 14px 30px rgba(227,82,5,.38) }
+      .btn-primary:active{ transform:scale(.98) }
+
+      .custom-timepicker .react-time-picker__wrapper{
+        border-radius: 14px;
+        border: 1px solid rgba(0,0,0,.1);
+        padding: .35rem .5rem;
+        background: #fff;
+      }
+      .custom-timepicker .react-time-picker__inputGroup__input{
+        color:#111827;
+      }
+    `}</style>
   );
 }
