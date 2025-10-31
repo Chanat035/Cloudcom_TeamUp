@@ -1,4 +1,3 @@
-// app/home/page.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -386,7 +385,9 @@ function StyleBlock() {
       .hero-overlay{
         position:absolute; inset:0; pointer-events:none;
         background: radial-gradient(600px 220px at 65% 55%, rgba(255,255,255,.55), transparent 60%);
-        mix-blend-mode: screen; filter: blur(2px);
+        mix-blend-mode: screen;
+        filter: blur(2px);
+        /* ✅ แก้จุดพัง: เติมค่าครบ + ใส่ ; ปิดท้าย */
         animation: glowShift 10s ease-in-out infinite;
       }
       @keyframes heroFlow{
