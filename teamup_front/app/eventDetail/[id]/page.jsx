@@ -131,7 +131,7 @@ export default function EventDetailPage() {
             const parts = await participantsRes.json();
             const ownerId = normalized.owner;
             if (ownerId) {
-              const foundOrganizerRecord = parts.find((r) => r.role === "organizer" && r.user_id === ownerId);
+              const foundOrganizerRecord = parts.find((r) => r.role === "organizer");
               if (foundOrganizerRecord) {
                 try {
                   const sRes = await fetch(`${API_URL}/api/auth/status`, { credentials: "include" });
