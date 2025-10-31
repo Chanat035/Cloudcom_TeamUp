@@ -3,7 +3,14 @@
 import React, { useEffect, useState } from "react";
 import MainLayout from "@/app/component/MainLayout.jsx";
 import { API_URL } from "@/lib/config";
-import { MapPin, Clock, User, ArrowLeft, Edit2, RectangleEllipsis } from "lucide-react";
+import {
+  MapPin,
+  Clock,
+  User,
+  ArrowLeft,
+  Edit2,
+  RectangleEllipsis,
+} from "lucide-react";
 
 function parseBangkok(dateStr) {
   if (!dateStr) return null;
@@ -74,9 +81,11 @@ export default function EventDetailPage() {
           location: data.location ?? data.venue ?? "ไม่ระบุสถานที่",
           category: data.category ?? data.venue ?? "",
           imageField: data.image ?? data.photo ?? data.cover ?? "",
-          description: data.description ?? data.detail ?? data.desc ?? "ไม่มีคำอธิบาย",
+          description:
+            data.description ?? data.detail ?? data.desc ?? "ไม่มีคำอธิบาย",
           owner: data.owner ?? data.user_id ?? data.owner_id ?? null,
-          signupdeadline: data.signupdeadline ?? data.signUpDeadline ?? data.deadline ?? null,
+          signupdeadline:
+            data.signupdeadline ?? data.signUpDeadline ?? data.deadline ?? null,
         };
 
         setEventData(normalized);
@@ -95,7 +104,9 @@ export default function EventDetailPage() {
 
         if (normalized.owner) {
           try {
-            const uRes = await fetch(`${API_URL}/api/user/${encodeURIComponent(normalized.owner)}`);
+            const uRes = await fetch(
+              `${API_URL}/api/user/${encodeURIComponent(normalized.owner)}`
+            );
             if (uRes.ok) {
               const uJson = await uRes.json();
               setOwnerName(uJson.name || "ไม่ระบุ");
@@ -110,9 +121,12 @@ export default function EventDetailPage() {
         }
 
         try {
-          const pRes = await fetch(`${API_URL}/api/eventDetail/${id}/checkParticipant`, {
-            credentials: "include",
-          });
+          const pRes = await fetch(
+            `${API_URL}/api/eventDetail/${id}/checkParticipant`,
+            {
+              credentials: "include",
+            }
+          );
           if (pRes.ok) {
             const pJson = await pRes.json();
             setJoined(Boolean(pJson.joined));
@@ -124,31 +138,33 @@ export default function EventDetailPage() {
         }
 
         try {
-          const participantsRes = await fetch(`${API_URL}/api/activity/${id}/participants`, {
-            credentials: "include",
-          });
+          const participantsRes = await fetch(
+            `${API_URL}/api/activity/${id}/participants`,
+            {
+              credentials: "include",
+            }
+          );
+
           if (participantsRes.ok) {
             const parts = await participantsRes.json();
-            const ownerId = normalized.owner;
-            if (ownerId) {
-              const foundOrganizerRecord = parts.find((r) => r.role === "organizer");
-              if (foundOrganizerRecord) {
-                try {
-                  const sRes = await fetch(`${API_URL}/api/auth/status`, { credentials: "include" });
-                  if (sRes.ok) {
-                    const sJson = await sRes.json();
-                    const sessionSub = sJson.userInfo?.sub;
-                    setIsOrganizer(!!sessionSub && sessionSub === ownerId);
-                  } else {
-                    setIsOrganizer(false);
-                  }
-                } catch {
-                  setIsOrganizer(false);
-                }
+
+            try {
+              const sRes = await fetch(`${API_URL}/api/auth/status`, {
+                credentials: "include",
+              });
+              if (sRes.ok) {
+                const sJson = await sRes.json();
+                const currentUserId = sJson.userInfo?.sub;
+
+                // ✅ เช็คว่าผู้ใช้ปัจจุบันอยู่ใน participants และมี role === 'organizer' หรือไม่
+                const isOrg = parts.some(
+                  (r) => r.role === "organizer" && r.user_id === currentUserId
+                );
+                setIsOrganizer(isOrg);
               } else {
                 setIsOrganizer(false);
               }
-            } else {
+            } catch {
               setIsOrganizer(false);
             }
           } else {
@@ -173,12 +189,15 @@ export default function EventDetailPage() {
     if (!eventData) return;
     setJoining(true);
     try {
-      const res = await fetch(`${API_URL}/api/eventDetail/${eventData.id}/join`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
+      const res = await fetch(
+        `${API_URL}/api/eventDetail/${eventData.id}/join`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`${res.status} ${res.statusText} - ${t}`);
@@ -196,10 +215,13 @@ export default function EventDetailPage() {
     if (!eventData) return;
     if (!confirm("ต้องการออกจากกิจกรรมใช่หรือไม่?")) return;
     try {
-      const res = await fetch(`${API_URL}/api/eventDetail/${eventData.id}/cancel`, {
-        method: "PUT",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_URL}/api/eventDetail/${eventData.id}/cancel`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
+      );
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`${res.status} ${res.statusText} - ${t}`);
@@ -238,25 +260,40 @@ export default function EventDetailPage() {
 
   const start = parseBangkok(eventData.date);
   const end = parseBangkok(eventData.enddate);
-  const dateStr = start ? start.toLocaleString("th-TH", { dateStyle: "long" }) : "ไม่ระบุวันที่";
+  const dateStr = start
+    ? start.toLocaleString("th-TH", { dateStyle: "long" })
+    : "ไม่ระบุวันที่";
   const startTime = start
-    ? start.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })
+    ? start.toLocaleTimeString("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
     : "";
   const endTime = end
-    ? end.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })
+    ? end.toLocaleTimeString("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
     : "";
 
   return (
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-pink-50">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <button onClick={() => window.history.back()} className="flex items-center gap-2 text-neutral-700 mb-4 hover:text-[#E35205] transition">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 text-neutral-700 mb-4 hover:text-[#E35205] transition"
+          >
             <ArrowLeft className="w-4 h-4" /> ย้อนกลับ
           </button>
 
           <div className="rounded-3xl overflow-hidden bg-white/90 backdrop-blur border border-black/5 shadow-[0_12px_30px_rgba(0,0,0,.06)]">
             <div className="p-6 md:p-7 bg-gradient-to-r from-[#FF944D] via-[#E96B2B] to-[#E35205] text-white relative">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{eventData.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {eventData.name}
+              </h1>
               <p className="text-sm md:text-[15px] text-white/90 mt-1">
                 {dateStr}
                 {start ? ` · ${startTime}` : ""}
@@ -281,13 +318,17 @@ export default function EventDetailPage() {
                       }}
                     />
                   ) : (
-                    <div className="w-full h-64 flex items-center justify-center text-neutral-400">ไม่มีรูปภาพ</div>
+                    <div className="w-full h-64 flex items-center justify-center text-neutral-400">
+                      ไม่มีรูปภาพ
+                    </div>
                   )}
                 </div>
 
                 <div className="rounded-2xl p-5 bg-white/90 border border-orange-100 text-neutral-900 shadow-[0_6px_18px_rgba(0,0,0,.05)]">
                   <h3 className="font-semibold mb-2 text-lg">รายละเอียด</h3>
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{eventData.description}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">
+                    {eventData.description}
+                  </p>
                 </div>
               </div>
 
@@ -298,7 +339,12 @@ export default function EventDetailPage() {
                   </h4>
                   <div className="text-sm">
                     <div>{dateStr}</div>
-                    {start && <div>{startTime}{end ? ` - ${endTime}` : ""}</div>}
+                    {start && (
+                      <div>
+                        {startTime}
+                        {end ? ` - ${endTime}` : ""}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -311,7 +357,8 @@ export default function EventDetailPage() {
 
                 <div className="card-info">
                   <h4 className="card-title">
-                    <RectangleEllipsis className="w-4 h-4 text-[#E35205]" /> ประเภท
+                    <RectangleEllipsis className="w-4 h-4 text-[#E35205]" />{" "}
+                    ประเภท
                   </h4>
                   <div className="text-sm">{eventData.category}</div>
                 </div>
@@ -330,15 +377,26 @@ export default function EventDetailPage() {
                     </button>
                   ) : (
                     <>
-                      {eventData.signupdeadline && new Date(eventData.signupdeadline) < new Date() ? (
-                        <button disabled className="btn-disabled w-full">ปิดรับสมัคร</button>
+                      {eventData.signupdeadline &&
+                      new Date(eventData.signupdeadline) < new Date() ? (
+                        <button disabled className="btn-disabled w-full">
+                          ปิดรับสมัคร
+                        </button>
                       ) : joined ? (
                         <>
-                          <button disabled className="btn-disabled flex-1">เข้าร่วมแล้ว</button>
-                          <button onClick={handleCancel} className="btn-ghost">ออกจากกิจกรรม</button>
+                          <button disabled className="btn-disabled flex-1">
+                            เข้าร่วมแล้ว
+                          </button>
+                          <button onClick={handleCancel} className="btn-ghost">
+                            ออกจากกิจกรรม
+                          </button>
                         </>
                       ) : (
-                        <button onClick={handleJoin} disabled={joining} className="btn-primary w-full">
+                        <button
+                          onClick={handleJoin}
+                          disabled={joining}
+                          className="btn-primary w-full"
+                        >
                           {joining ? "กำลังเข้าร่วม..." : "เข้าร่วม"}
                         </button>
                       )}
@@ -349,10 +407,13 @@ export default function EventDetailPage() {
                 {eventData.signupdeadline && (
                   <div className="text-sm text-neutral-600 mt-1.5">
                     ลงทะเบียนได้ถึง:{" "}
-                    {parseBangkok(eventData.signupdeadline).toLocaleString("th-TH", {
-                      dateStyle: "long",
-                      timeStyle: "short",
-                    })}
+                    {parseBangkok(eventData.signupdeadline).toLocaleString(
+                      "th-TH",
+                      {
+                        dateStyle: "long",
+                        timeStyle: "short",
+                      }
+                    )}
                   </div>
                 )}
               </aside>
@@ -362,45 +423,82 @@ export default function EventDetailPage() {
       </div>
 
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap');
-        html, body { font-family: 'IBM Plex Sans Thai Looped', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif; }
-        .card-info{
+        @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap");
+        html,
+        body {
+          font-family: "IBM Plex Sans Thai Looped", system-ui, -apple-system,
+            "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+        }
+        .card-info {
           border-radius: 16px;
-          background: rgba(255,255,255,.94);
-          border: 1px solid rgba(227,82,5,.18);
-          box-shadow: 0 8px 22px rgba(0,0,0,.05);
+          background: rgba(255, 255, 255, 0.94);
+          border: 1px solid rgba(227, 82, 5, 0.18);
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
           padding: 16px;
           color: #111827;
         }
-        .card-title{
-          display:flex;align-items:center;gap:.5rem;
-          font-weight:600;margin-bottom:.5rem;
+        .card-title {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
         }
-        .btn-primary{
-          display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
-          padding:.65rem 1rem;border-radius:12px;
-          background: linear-gradient(90deg,#E96B2B,#E35205);
-          color:#fff;font-weight:600;
-          box-shadow:0 10px 26px rgba(227,82,5,.35);
-          transition:transform .15s ease, filter .2s ease, box-shadow .2s ease;
-          animation:pulseSoft 3s ease-in-out infinite;
+        .btn-primary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 0.65rem 1rem;
+          border-radius: 12px;
+          background: linear-gradient(90deg, #e96b2b, #e35205);
+          color: #fff;
+          font-weight: 600;
+          box-shadow: 0 10px 26px rgba(227, 82, 5, 0.35);
+          transition: transform 0.15s ease, filter 0.2s ease,
+            box-shadow 0.2s ease;
+          animation: pulseSoft 3s ease-in-out infinite;
         }
-        .btn-primary:hover{ filter:brightness(.98); box-shadow:0 14px 32px rgba(227,82,5,.45); }
-        .btn-primary:active{ transform:scale(.98); }
-        .btn-ghost{
-          display:inline-flex;align-items:center;gap:.5rem;
-          padding:.6rem .9rem;border-radius:12px;
-          background:#fff;border:1px solid rgba(0,0,0,.08); color:#111827;
-          box-shadow:0 6px 16px rgba(0,0,0,.06);
-          transition:background .2s ease, box-shadow .2s ease;
+        .btn-primary:hover {
+          filter: brightness(0.98);
+          box-shadow: 0 14px 32px rgba(227, 82, 5, 0.45);
         }
-        .btn-ghost:hover{ background:#fafafa; box-shadow:0 8px 22px rgba(0,0,0,.08); }
-        .btn-disabled{
-          padding:.6rem .9rem;border-radius:12px;
-          background:#E5E7EB;color:#6B7280;cursor:not-allowed;
-          box-shadow:0 0 0 rgba(0,0,0,0);
+        .btn-primary:active {
+          transform: scale(0.98);
         }
-        @keyframes pulseSoft{ 0%,100%{ box-shadow:0 10px 26px rgba(227,82,5,.35) } 50%{ box-shadow:0 12px 34px rgba(227,82,5,.45) } }
+        .btn-ghost {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.6rem 0.9rem;
+          border-radius: 12px;
+          background: #fff;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: #111827;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-ghost:hover {
+          background: #fafafa;
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+        }
+        .btn-disabled {
+          padding: 0.6rem 0.9rem;
+          border-radius: 12px;
+          background: #e5e7eb;
+          color: #6b7280;
+          cursor: not-allowed;
+          box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+        }
+        @keyframes pulseSoft {
+          0%,
+          100% {
+            box-shadow: 0 10px 26px rgba(227, 82, 5, 0.35);
+          }
+          50% {
+            box-shadow: 0 12px 34px rgba(227, 82, 5, 0.45);
+          }
+        }
       `}</style>
     </MainLayout>
   );
