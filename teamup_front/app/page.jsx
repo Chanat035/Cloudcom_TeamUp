@@ -76,7 +76,9 @@ export default function Page() {
           font-family: 'IBM Plex Sans Thai Looped', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
         }
 
-        .landing-bg{
+        .landing-bg {
+          position: relative;
+          overflow: hidden;
           --c1:#FFF3E9; --c2:#FFFDF9; --c3:#FFE7D6;
           background:
             radial-gradient(900px 420px at 15% 0%, var(--c3) 0, var(--c2) 55%, var(--c1) 80%),
@@ -84,13 +86,27 @@ export default function Page() {
           background-size: 160% 160%;
           animation: bgShift 24s ease-in-out infinite;
         }
-        @keyframes bgShift{
-          0%{ background-position: 0% 50%, 100% 50% }
-          50%{ background-position: 100% 50%, 0% 50% }
-          100%{ background-position: 0% 50%, 100% 50% }
+
+        .landing-bg::before {
+          content: "";
+          position: absolute;
+          inset: -20px;
+          background: url("https://www.kmitl.ac.th/sites/default/files/2021-08/_MG_5_11.jpg")
+                      center / cover no-repeat;
+          filter: blur(14px) saturate(110%);
+          transform: scale(1.06);
+          opacity: 0.38;
+          z-index: -1;
+          pointer-events: none;
         }
 
-        .welcome-card{
+        @keyframes bgShift {
+          0% { background-position: 0% 50%, 100% 50%; }
+          50% { background-position: 100% 50%, 0% 50%; }
+          100% { background-position: 0% 50%, 100% 50%; }
+        }
+
+        .welcome-card {
           width: 900px;
           max-width: 96vw;
           border-radius: 28px;
@@ -102,23 +118,24 @@ export default function Page() {
           position: relative;
           overflow: hidden;
         }
-        @keyframes heroFlow{
-          0%{ background-position: 0% 50% }
-          50%{ background-position: 100% 50% }
-          100%{ background-position: 0% 50% }
+
+        @keyframes heroFlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
-        @keyframes floatSoft{
-          0%,100%{ transform: translateY(0) }
-          50%{ transform: translateY(-6px) }
+        @keyframes floatSoft {
+          0%,100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
         }
 
-        .hero-head{
+        .hero-head {
           position: relative;
           z-index: 1;
           text-align: center;
           color: #1f2937;
         }
-        .logo-dot{
+        .logo-dot {
           width: 58px; height: 58px;
           margin: 0 auto 8px;
           border-radius: 16px;
@@ -128,25 +145,25 @@ export default function Page() {
           background: linear-gradient(135deg, #ff9b57, #e35205);
           box-shadow: 0 10px 24px rgba(227,82,5,.35);
         }
-        .title{
+        .title {
           font-size: clamp(24px, 2.4vw, 34px);
           font-weight: 800;
           color: #111827;
         }
-        .tagline{
+        .tagline {
           margin-top: 6px;
           color: #1f2937;
           opacity: .92;
         }
 
-        .chips{
+        .chips {
           margin: 22px auto 12px;
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
           justify-content: center;
         }
-        .chip{
+        .chip {
           --o:#E35205;
           padding: 10px 18px;
           border-radius: 9999px;
@@ -159,15 +176,15 @@ export default function Page() {
           transition: transform .18s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
           animation: fadeUp .6s both;
         }
-        .chip:hover{
+        .chip:hover {
           transform: translateY(-2px);
           border-color: var(--o);
           background: #fff7f2;
           box-shadow: 0 12px 28px rgba(227,82,5,.22);
         }
-        .chip:active{ transform: scale(.98) }
+        .chip:active { transform: scale(.98); }
 
-        .cta{
+        .cta {
           display: block;
           width: max-content;
           margin: 12px auto 0;
@@ -180,13 +197,21 @@ export default function Page() {
           transition: filter .18s ease, transform .12s ease, box-shadow .18s ease;
           animation: pulseSoft 2.8s ease-in-out infinite;
         }
-        .cta:hover{ filter: brightness(.98); box-shadow: 0 16px 38px rgba(227,82,5,.45) }
-        .cta:active{ transform: scale(.98) }
+        .cta:hover {
+          filter: brightness(.98);
+          box-shadow: 0 16px 38px rgba(227,82,5,.45);
+        }
+        .cta:active { transform: scale(.98); }
 
-        @keyframes fadeUp { from{opacity:0; transform: translateY(8px)} to{opacity:1; transform: translateY(0)} }
-        @keyframes pulseSoft { 0%,100%{ box-shadow:0 12px 30px rgba(227,82,5,.38) } 50%{ box-shadow:0 16px 42px rgba(227,82,5,.48) } }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseSoft {
+          0%,100% { box-shadow: 0 12px 30px rgba(227,82,5,.38); }
+          50% { box-shadow: 0 16px 42px rgba(227,82,5,.48); }
+        }
       `}</style>
     </main>
   );
 }
-
