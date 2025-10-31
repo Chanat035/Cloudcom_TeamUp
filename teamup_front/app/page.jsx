@@ -1,10 +1,13 @@
-"use client";
-
+"use client"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_URL, FRONTEND_URL, COGNITO_DOMAIN, COGNITO_CLIENT_ID, OAUTH_REDIRECT_URI } from "@/lib/config";
 
-export default function Home() {
+import AdventureButton from "./component/AdventureButton";
+
+export default function Page() {
+  const options = ["Hackathon", "Sports", "Workshop", "Volunteer", "Game Jam"];
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const router = useRouter();
@@ -40,28 +43,30 @@ export default function Home() {
     }
   };
 
-
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-700 mb-4">
-          TeamUp
-          </h1>
-        </div>
+    <main className="min-h-screen w-full grid place-items-center">
+      <section className="bg-card bg-white px-10 py-10 shadow-soft w-[820px] max-w-[92vw]">
+        <h1 className="text-center text-2xl sm:text-3xl tracking-wide text-neutral-900">
+          What’s your next adventure?
+        </h1>
 
-        <div className="flex gap-6 items-center flex-col sm:flex-row">
-          <button
-            onClick={handleLogin}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200"
-          >
-            เข้าสู่ระบบ
-          </button>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+          {options.map((label) => (
+            <button
+              type="button"
+              key={label}
+              aria-disabled="true"
+              onClick={handleLogin}
+              className="rounded-full border-2 border-neutral-400/80 px-5 py-2.5 text-base text-neutral-900
+                        hover:border-neutral-700 hover:shadow
+                        focus:outline-none focus:ring-4 focus:ring-neutral-300 active:scale-[0.99]
+                        transition"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-gray-600">
-        <span>© 2025 Cloudcom TeamUp</span>
-      </footer>
-    </div>
+      </section>
+    </main>
   );
 }

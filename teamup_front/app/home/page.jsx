@@ -2,9 +2,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, MapPin, RectangleEllipsis } from "lucide-react";
+import { Calendar, MapPin, RectangleEllipsis, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import MainLayout from "../component/MainLayout.jsx"
+import MainLayout from "../component/MainLayout.jsx";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3100";
 
@@ -20,6 +20,7 @@ const CATEGORIES = [
   "อื่นๆ",
 ];
 
+/* ---------- utils (เดิม) ---------- */
 function pickDate(obj, keys = []) {
   for (const k of keys) {
     if (!obj) continue;
@@ -30,14 +31,12 @@ function pickDate(obj, keys = []) {
   }
   return null;
 }
-
 function adjustTimezoneMinus7(date) {
   if (!date) return null;
   const d = new Date(date);
   d.setHours(d.getHours() - 7);
   return d;
 }
-
 function formatDateRange(start, end) {
   const f = (d) => {
     const dd = String(d.getDate()).padStart(2, "0");
@@ -50,47 +49,35 @@ function formatDateRange(start, end) {
   if (!start && !end) return "วันที่ไม่ระบุ";
   if (start && end) {
     if (start.toDateString() === end.toDateString()) {
-      return `${f(start)} - ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
+      return `${f(start)} - ${String(end.getHours()).padStart(2, "0")}:${String(
+        end.getMinutes()
+      ).padStart(2, "0")}`;
     }
     return `${f(start)} - ${f(end)}`;
   }
   return f(start || end);
 }
-
-// If raw is a relative path or id, make absolute; used when backend gives '/uploads/..' or 'uploads/..'
 function makeAbsoluteImageUrl(raw) {
   if (!raw) return "/default.jpg";
   if (typeof raw === "string" && (raw.startsWith("http://") || raw.startsWith("https://"))) return raw;
-  // if raw looks like a file path or starts without slash
   return `${API.replace(/\/$/, "")}/${String(raw).replace(/^\/+/, "")}`;
 }
-
-// try fetching image via /api/getActivityImage/:id (expect JSON { imageUrl: "..."} or direct redirect)
 async function tryFetchActivityImage(activityId) {
   try {
     const r = await fetch(`${API}/api/getActivityImage/${activityId}`);
     if (!r.ok) return null;
     const j = await r.json().catch(() => null);
-    if (j && (j.imageUrl || j.url || j.path)) {
-      return makeAbsoluteImageUrl(j.imageUrl || j.url || j.path);
-    }
-    // if JSON not provided, maybe endpoint returns redirect to image — try r.url
-    if (r.url && (r.url.endsWith(".jpg") || r.url.endsWith(".png") || r.url.includes("/uploads/"))) {
-      return r.url;
-    }
+    if (j && (j.imageUrl || j.url || j.path)) return makeAbsoluteImageUrl(j.imageUrl || j.url || j.path);
+    if (r.url && (r.url.endsWith(".jpg") || r.url.endsWith(".png") || r.url.includes("/uploads/"))) return r.url;
     return null;
-  } catch (e) {
-    return null;
-  }
+  } catch { return null; }
 }
-
-// try to fetch user name from several endpoints (best-effort)
 async function tryFetchUserName(userId) {
   if (!userId) return null;
   const candidates = [
     `${API}/api/user/${userId}`,
     `${API}/api/users/${userId}`,
-    `${API}/api/profile/${userId}`
+    `${API}/api/profile/${userId}`,
   ];
   for (const url of candidates) {
     try {
@@ -101,16 +88,14 @@ async function tryFetchUserName(userId) {
         if (j.name) return j.name;
         if (j.displayName) return j.displayName;
         if (j.username) return j.username;
-        // sometimes user object nested
         if (j.user && (j.user.name || j.user.displayName)) return j.user.name || j.user.displayName;
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch {}
   }
   return null;
 }
 
+/* ---------- page ---------- */
 export default function LandingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -124,14 +109,12 @@ export default function LandingPage() {
   useEffect(() => {
     (async () => {
       try {
-        // auth
         try {
           const authRes = await fetch(`${API}/api/auth/status`, { credentials: "include" });
           if (authRes.ok) {
             const authJson = await authRes.json();
             if (authJson.isAuthenticated) {
               setUser(authJson.userInfo || {});
-              // profile image and interests best-effort
               try {
                 const pRes = await fetch(`${API}/api/settings/getInterests`, { credentials: "include" });
                 if (pRes.ok) {
@@ -139,61 +122,40 @@ export default function LandingPage() {
                   setProfileImage(pj.imageUrl || pj.avatar || null);
                   if (Array.isArray(pj.interests)) setInterests(pj.interests);
                 }
-              } catch (e) {}
-            } else {
-              setUser(false);
-            }
-          } else {
-            setUser(false);
-          }
-        } catch (e) {
-          setUser(false);
-        }
+              } catch {}
+            } else setUser(false);
+          } else setUser(false);
+        } catch { setUser(false); }
 
-        // fetch events
         const r = await fetch(`${API}/api/eventSchedule`, { credentials: "include" });
         const json = r.ok ? await r.json() : [];
-
         const now = new Date();
 
-        // normalize first pass
         const base = (json || []).map((ev) => {
-          // detect name fields
           const title = ev.name || ev.title || ev.activityName || "กิจกรรม";
-          // owner may be id or name; preserve both
           const ownerId = ev.owner || ev.ownerId || ev.createdBy || null;
           const ownerNameField = ev.ownerName || ev.owner_name || ev.ownerFullName || ev.ownerDisplayName || null;
 
-          // image field may be string or object
           let rawImg = ev.imageUrl || ev.image || ev.picture || ev.image_path || (ev.imageObj && (ev.imageObj.url || ev.imageObj.path)) || null;
           if (rawImg && typeof rawImg === "object") rawImg = rawImg.url || rawImg.path || null;
 
-          const start = adjustTimezoneMinus7(pickDate(ev, ['startDate','startdate','start','begin','start_at']));
-          const end = adjustTimezoneMinus7(pickDate(ev, ['endDate','enddate','end','finish','end_at']));
-          const signup = adjustTimezoneMinus7(pickDate(ev, ['signupdeadline','signUpDeadline','signup_deadline','registration_deadline']));
+          const start = adjustTimezoneMinus7(pickDate(ev, ["startDate","startdate","start","begin","start_at"]));
+          const end = adjustTimezoneMinus7(pickDate(ev, ["endDate","enddate","end","finish","end_at"]));
+          const signup = adjustTimezoneMinus7(pickDate(ev, ["signupdeadline","signUpDeadline","signup_deadline","registration_deadline"]));
 
           return {
-            raw: ev,
-            id: ev.id || ev._id || ev.activityId,
-            title,
-            ownerId,
-            ownerNameField,
-            imageCandidate: rawImg,
-            start,
-            end,
-            signupdeadline: signup,
+            raw: ev, id: ev.id || ev._id || ev.activityId, title,
+            ownerId, ownerNameField, imageCandidate: rawImg,
+            start, end, signupdeadline: signup,
             location: ev.location || ev.place || ev.venue || "",
             category: ev.category || "อื่นๆ",
           };
         });
 
-        // filter: only activities with signupdeadline in future
         const filteredBase = base.filter(a => a.signupdeadline && a.signupdeadline > now);
 
-        // enrich: for each activity, ensure ownerName and imageUrl resolved
         const enriched = await Promise.all(filteredBase.map(async (a) => {
           let ownerName = a.ownerNameField || null;
-          // if ownerName missing or looks like an id (uuid-like or long hex), try fetch user endpoint
           const isIdLike = !ownerName && a.ownerId && typeof a.ownerId === "string" && /^[0-9a-fA-F\-]{8,}$/.test(a.ownerId);
           if (isIdLike) {
             const fetched = await tryFetchUserName(a.ownerId);
@@ -202,28 +164,18 @@ export default function LandingPage() {
           if (!ownerName && a.ownerId && typeof a.ownerId === "string" && !isIdLike) ownerName = a.ownerId;
           if (!ownerName) ownerName = "ไม่ระบุชื่อผู้จัด";
 
-          // image: if candidate is already absolute or relative, make absolute; otherwise try fetching via endpoint
           let imageUrl = null;
-          if (a.imageCandidate) {
-            imageUrl = makeAbsoluteImageUrl(a.imageCandidate);
-          } else if (a.id) {
-            // try backend endpoint returning JSON with image
+          if (a.imageCandidate) imageUrl = makeAbsoluteImageUrl(a.imageCandidate);
+          else if (a.id) {
             const fetchedImg = await tryFetchActivityImage(a.id);
             if (fetchedImg) imageUrl = fetchedImg;
           }
           if (!imageUrl) imageUrl = "/default.jpg";
 
           return {
-            id: a.id,
-            title: a.title,
-            ownerName,
-            imageUrl,
-            start: a.start,
-            end: a.end,
-            signupdeadline: a.signupdeadline,
-            location: a.location,
-            category: a.category,
-            raw: a.raw,
+            id:a.id, title:a.title, ownerName, imageUrl,
+            start:a.start, end:a.end, signupdeadline:a.signupdeadline,
+            location:a.location, category:a.category, raw:a.raw
           };
         }));
 
@@ -237,7 +189,7 @@ export default function LandingPage() {
   }, []);
 
   async function handleLogout() {
-    try { await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" }); } catch (e) {}
+    try { await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" }); } catch {}
     if (typeof window !== "undefined") window.location.reload();
   }
 
@@ -247,79 +199,255 @@ export default function LandingPage() {
     return true;
   });
 
-  if (loading) return <div className="flex justify-center items-center h-screen">กำลังโหลด...</div>;
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="page-bg">
+          <main className="max-w-7xl mx-auto px-6 py-10">
+            <section className="hero">
+              <div className="hero-overlay" />
+              <div className="skeleton h-8 w-72 mb-4" />
+              <div className="skeleton h-5 w-[28rem] max-w-full mb-6" />
+              <div className="skeleton h-12 w-full max-w-3xl rounded-2xl" />
+            </section>
+          </main>
+        </div>
+        <StyleBlock />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <h2 className="text-3xl font-bold mb-1 text-gray-900">สวัสดี, {user?.name?.split(" ")[0] || "ผู้ใช้"} 👋</h2>
-        <p className="text-gray-800 mb-6">มีกิจกรรมดีๆ รออยู่ — ค้นหาและเข้าร่วมได้ง่าย ๆ</p>
+      <div className="page-bg">
+        <main className="max-w-7xl mx-auto px-6 py-10">
+          {/* HERO: playful + soft gradient motion */}
+          <section className="hero">
+            <div className="hero-overlay" />
+            <h2 className="text-3xl md:text-4xl font-semibold text-neutral-900">
+              สวัสดี, <span className="font-extrabold">{user?.name?.split(" ")[0] || "ผู้ใช้"}</span> 👋
+            </h2>
+            <p className="mt-2 text-lg text-neutral-800">
+              ส่งเสริมนักศึกษา KMITL ให้ค้นหา ผูกพัน และก้าวหน้าไปกับทุกกิจกรรมในแคมปัส‼ ✩
+            </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6 bg-white p-4 rounded-lg">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ค้นหากิจกรรม..." className="flex-1 px-4 py-2 border rounded-lg text-black" />
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-4 py-2 border rounded-lg text-black">
-            <option>ทั้งหมด</option>
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
-            {filtered.length === 0 && <div className="bg-white p-6 rounded-xl text-center text-gray-700">ไม่พบกิจกรรม</div>}
-            {filtered.map(a => (
-              <div key={a.id} className="bg-white rounded-xl p-6 shadow hover:shadow-lg transition">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="w-full sm:w-48 h-48 bg-gray-100 overflow-hidden rounded-lg">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.imageUrl} alt={a.title} className="object-cover w-full h-full" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900">{a.title}</h3>
-                    <p className="text-gray-800 text-sm mb-2">{a.ownerName} • {a.location || "สถานที่ไม่ระบุ"}</p>
-                    <p className="text-gray-700 text-sm flex items-center"><Calendar className="w-4 h-4 mr-2 text-blue-600" />{formatDateRange(a.start, a.end)}</p>
-                    <p className="text-gray-700 text-sm flex items-center"><MapPin className="w-4 h-4 mr-2 text-blue-600" />{a.location || "-"}</p>
-                    <p className="text-gray-700 text-sm flex items-center"><RectangleEllipsis className="w-4 h-4 mr-2 text-blue-600" />{a.category|| "-"}</p>
-                    <p className="text-gray-700 text-sm mt-2">ลงทะเบียนได้ถึง: {a.signupdeadline ? formatDateRange(a.signupdeadline, null) : "ไม่ระบุ"}</p>
-                    <button onClick={() => router.push(`/eventDetail/${a.id}`)} className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition">ดูรายละเอียด</button>
-                  </div>
-                </div>
+            <div className="mt-6 flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#E35205]/70" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="ค้นหากิจกรรม..."
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl border border-white/60 bg-white/95
+                             text-neutral-900 placeholder:text-neutral-400
+                             focus:outline-none focus:ring-2 focus:ring-[#E35205]/40 shadow-soft"
+                />
               </div>
-            ))}
-          </div>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="px-4 py-3 rounded-2xl border border-white/60 bg-white/95 text-neutral-900
+                           focus:outline-none focus:ring-2 focus:ring-[#E35205]/40 shadow-soft"
+              >
+                <option>ทั้งหมด</option>
+                {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </section>
 
-          <aside className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">กิจกรรมที่จะปิดรับภายใน 10 วัน</h3>
-              {activities.filter(a => a.signupdeadline && (a.signupdeadline > new Date()) && ((a.signupdeadline - new Date()) < 10*24*60*60*1000))
-                .sort((x,y) => new Date(x.signupdeadline) - new Date(y.signupdeadline))
-                .slice(0,3)
-                .map(ev => (
-                  <div key={ev.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => router.push(`/eventDetail/${ev.id}`)}>
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-white" />
+          {/* GRID */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+            {/* list */}
+            <div className="lg:col-span-2 space-y-6">
+              {filtered.length === 0 && (
+                <div className="card text-center py-12">
+                  <p className="text-lg font-medium text-neutral-700">ไม่พบกิจกรรม</p>
+                  <p className="text-sm text-neutral-500 mt-1">ลองลบตัวกรองหรือค้นหาคำอื่น</p>
+                </div>
+              )}
+
+              {filtered.map((a, i) => (
+                <article key={a.id} className="card hover:-translate-y-1" style={{animationDelay:`${i*70}ms`}}>
+                  <div className="flex flex-col sm:flex-row gap-0 sm:gap-6">
+                    <div className="relative sm:w-56 overflow-hidden rounded-2xl sm:rounded-xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.imageUrl} alt={a.title} className="h-48 w-full sm:h-full object-cover img-zoom" />
+                      <span className="shine" />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{ev.title}</p>
-                      <p className="text-xs text-gray-700">{formatDateRange(ev.signupdeadline, null)}</p>
+                    <div className="flex-1 p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-xl font-semibold text-neutral-900">{a.title}</h3>
+                        <span className="badge">{a.category || "-"}</span>
+                      </div>
+                      <p className="mt-1 text-sm text-neutral-600">
+                        {a.ownerName} • {a.location || "สถานที่ไม่ระบุ"}
+                      </p>
+                      <div className="mt-3 space-y-1.5 text-sm text-neutral-700">
+                        <p className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-[#E35205]" />
+                          {formatDateRange(a.start, a.end)}
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-[#E35205]" />
+                          {a.location || "-"}
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <RectangleEllipsis className="h-4 w-4 text-[#E35205]" />
+                          {a.category || "-"}
+                        </p>
+                      </div>
+                      <p className="mt-3 text-sm text-neutral-700">
+                        ลงทะเบียนได้ถึง: {a.signupdeadline ? formatDateRange(a.signupdeadline, null) : "ไม่ระบุ"}
+                      </p>
+                      <button onClick={() => router.push(`/eventDetail/${a.id}`)} className="btn-primary">
+                        ดูรายละเอียด
+                      </button>
                     </div>
                   </div>
-                ))}
+                </article>
+              ))}
             </div>
 
-            {/* show interest block ONLY if interests exist */}
-            {Array.isArray(interests) && interests.length > 0 && (
-              <div className="bg-white p-6 rounded-xl shadow">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">ความสนใจของคุณ</h3>
-                <div className="flex flex-wrap gap-2">
-                  {interests.map((i) => <span key={i} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">{i}</span>)}
-                </div>
+            {/* sidebar */}
+            <aside className="space-y-6">
+              <div className="card">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-4">กิจกรรมที่จะปิดรับภายใน 10 วัน</h3>
+                {activities
+                  .filter(a => a.signupdeadline && (a.signupdeadline > new Date()) && ((a.signupdeadline - new Date()) < 10*24*60*60*1000))
+                  .sort((x,y) => new Date(x.signupdeadline) - new Date(y.signupdeadline))
+                  .slice(0,3)
+                  .map(ev => (
+                    <div key={ev.id} onClick={() => router.push(`/eventDetail/${ev.id}`)}
+                         className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#FFF3EA] cursor-pointer transition">
+                      <div className="w-10 h-10 rounded-lg bg-[#E35205] flex items-center justify-center shadow-soft">
+                        <Calendar className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-neutral-900 text-sm">{ev.title}</p>
+                        <p className="text-xs text-neutral-600">{formatDateRange(ev.signupdeadline, null)}</p>
+                      </div>
+                    </div>
+                  ))}
               </div>
-            )}
-          </aside>
-        </div>
-      </main>
-    </div>
-  </MainLayout>
+
+              {Array.isArray(interests) && interests.length > 0 && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold text-neutral-900 mb-3">ความสนใจของคุณ</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {interests.map((i) => (
+                      <span key={i} className="badge">{i}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </aside>
+          </div>
+        </main>
+      </div>
+
+      {/* global font + animations */}
+      <StyleBlock />
+    </MainLayout>
+  );
+}
+
+/* ---------- global styles & keyframes (รวมทุกอย่างไว้ไฟล์เดียว) ---------- */
+function StyleBlock() {
+  return (
+    <style jsx global>{`
+      /* Google Font: IBM Plex Sans Thai Looped */
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@300;400;500;600;700&display=swap');
+      html, body { font-family: 'IBM Plex Sans Thai Looped', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans Thai', sans-serif; }
+
+      /* playful soft gradient bg (เคลื่อนไหว) */
+      .page-bg{
+        --c1:#FFF3E9; --c2:#FFFDF9; --c3:#FFE7D6;
+        background: radial-gradient(1200px 600px at 15% -10%, var(--c3) 0, var(--c2) 45%, var(--c1) 70%);
+        background-size: 160% 160%;
+        animation: bgShift 24s ease-in-out infinite;
+      }
+      @keyframes bgShift {
+        0%{ background-position: 0% 50% }
+        50%{ background-position: 100% 50% }
+        100%{ background-position: 0% 50% }
+      }
+
+      /* HERO */
+      .hero{
+        position:relative; overflow:hidden;
+        border-radius: 24px;
+        padding: 24px 20px;
+        background: linear-gradient(120deg, #FFD0A6, #FF944D, #E35205);
+        background-size: 220% 220%;
+        animation: heroFlow 12s ease-in-out infinite, floatSoft 8s ease-in-out infinite;
+        box-shadow: 0 18px 50px rgba(227,82,5,.18);
+      }
+      @media (min-width: 640px){ .hero{ padding: 32px 28px; } }
+      .hero-overlay{
+        position:absolute; inset:0; pointer-events:none;
+        background: radial-gradient(600px 220px at 65% 55%, rgba(255,255,255,.55), transparent 60%);
+        mix-blend-mode: screen; filter: blur(2px);
+        animation: glowShift 10s ease-in-out infinite;
+      }
+      @keyframes heroFlow{
+        0%{ background-position: 0% 50% }
+        50%{ background-position: 100% 50% }
+        100%{ background-position: 0% 50% }
+      }
+      @keyframes glowShift{
+        0%,100%{ transform: translateX(0) translateY(0) }
+        50%{ transform: translateX(-10px) translateY(6px) }
+      }
+      @keyframes floatSoft{ 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
+
+      /* Components */
+      .card{
+        border-radius: 24px;
+        background: rgba(255,255,255,.94);
+        border: 1px solid rgba(0,0,0,.05);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 10px 28px rgba(0,0,0,.06);
+        transition: transform .28s ease, box-shadow .28s ease;
+        animation: fadeUp .6s both;
+        overflow: hidden;
+      }
+      .shadow-soft{ box-shadow: 0 8px 22px rgba(0,0,0,.06); }
+      .badge{
+        display:inline-block; border-radius:9999px;
+        padding:.25rem .75rem; font-size:.75rem; font-weight:600;
+        color:#E35205; background:rgba(227,82,5,.12); border:1px solid rgba(227,82,5,.3);
+      }
+      .btn-primary{
+        margin-top:1rem; display:inline-flex; align-items:center; justify-content:center;
+        padding:.625rem 1.25rem; border-radius:9999px; color:#fff; background:#E35205;
+        box-shadow:0 8px 22px rgba(227,82,5,.35); transition:transform .15s ease, filter .2s ease, box-shadow .2s ease;
+        animation: pulseSoft 2.8s ease-in-out infinite;
+      }
+      .btn-primary:hover{ filter:brightness(.97); box-shadow:0 12px 28px rgba(227,82,5,.45); }
+      .btn-primary:active{ transform:scale(.98); }
+
+      /* image hover fun */
+      .img-zoom{ transition: transform .6s cubic-bezier(.2,.6,.2,1); }
+      .card:hover .img-zoom{ transform: scale(1.04) rotate(.2deg); }
+      .shine{
+        position:absolute; top:-20%; left:-60%; width:50%; height:140%;
+        background: linear-gradient(120deg, rgba(255,255,255,.0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,.0) 100%);
+        transform: skewX(-20deg); filter: blur(6px); opacity:0;
+        animation: none; pointer-events:none;
+      }
+      .card:hover .shine{ animation: sweep 1.2s ease forwards; }
+      @keyframes sweep{ 0%{ left:-60%; opacity:0 } 20%{ opacity:.6 } 100%{ left:120%; opacity:0 } }
+
+      /* skeleton & keyframes */
+      .skeleton{
+        border-radius: 16px;
+        background: linear-gradient(90deg, #eee 25%, #fafafa 37%, #eee 63%);
+        background-size: 400% 100%;
+        animation: shimmer 1.4s ease-in-out infinite;
+      }
+      @keyframes shimmer { 0%{background-position: 100% 0} 100%{background-position: -100% 0} }
+      @keyframes fadeUp { from{opacity:0; transform: translateY(8px)} to{opacity:1; transform: translateY(0)} }
+      @keyframes pulseSoft { 0%,100%{ box-shadow:0 8px 22px rgba(227,82,5,.35) } 50%{ box-shadow:0 10px 30px rgba(227,82,5,.45) } }
+    `}</style>
   );
 }

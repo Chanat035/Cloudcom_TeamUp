@@ -1,4 +1,3 @@
-// header.jsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -6,30 +5,20 @@ import { Users, Plus, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { API_URL } from "@/lib/config";
 
-export default function Header({
-  user: propUser = null,
-  profileImage: propProfileImage = null,
-  onLogout: propOnLogout = null,
-}) {
+export default function Header({ user: propUser = null, profileImage: propProfileImage = null, onLogout: propOnLogout = null }) {
   const router = useRouter();
   const [hover, setHover] = useState(false);
-
-  // internal state (ใช้เมื่อ parent ไม่ส่งค่าเข้ามา)
   const [user, setUser] = useState(propUser);
   const [profileImage, setProfileImage] = useState(propProfileImage);
   const [loadingAuth, setLoadingAuth] = useState(false);
 
   useEffect(() => {
-    // ถ้า parent ส่ง user มาแล้ว ไม่ต้อง fetch
     if (propUser) return;
-
     let mounted = true;
     const fetchAuth = async () => {
       setLoadingAuth(true);
       try {
-        const res = await fetch(`${API_URL}/api/auth/status`, {
-          credentials: "include",
-        });
+        const res = await fetch(`${API_URL}/api/auth/status`, { credentials: "include" });
         if (!res.ok) {
           if (mounted) {
             setUser(null);
@@ -53,14 +42,12 @@ export default function Header({
         if (mounted) setLoadingAuth(false);
       }
     };
-
     fetchAuth();
     return () => {
       mounted = false;
     };
   }, [propUser]);
 
-  // ถ้า parent ให้ onLogout มา ให้ใช้; ถ้าไม่ ให้สร้าง internal handler
   const handleLogout = propOnLogout
     ? propOnLogout
     : async () => {
@@ -76,7 +63,6 @@ export default function Header({
         }
       };
 
-  // sync เมื่อ parent เปลี่ยน props
   useEffect(() => {
     if (propUser !== undefined && propUser !== null) setUser(propUser);
   }, [propUser]);
@@ -87,83 +73,70 @@ export default function Header({
   }, [propProfileImage]);
 
   useEffect(() => {
-  if (!user) return;
-
-  const fetchProfileImage = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/getProfile`, {
-        credentials: "include",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.imageUrl) setProfileImage(data.imageUrl);
-    } catch (err) {
-      console.error("Error loading profile image:", err);
-    }
-  };
-
-  fetchProfileImage();
-}, [user]);
-
+    if (!user) return;
+    const fetchProfileImage = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/getProfile`, {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.imageUrl) setProfileImage(data.imageUrl);
+      } catch (err) {
+        console.error("Error loading profile image:", err);
+      }
+    };
+    fetchProfileImage();
+  }, [user]);
 
   return (
-    <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <header className="header-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* --- Logo / Nav --- */}
           <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div
+              onClick={() => router.push("/home")}
+              className="flex items-center space-x-3 cursor-pointer group"
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-[#E35205] to-[#FF944D] rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition">
                 <Users className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#E35205] to-[#FF944D] bg-clip-text text-transparent tracking-tight">
                 TeamUp
               </h1>
             </div>
 
-            <nav className="hidden md:flex space-x-6 items-center">
-              <a
-                href="/home"
-                className="text-gray-900 font-medium hover:text-blue-600 transition"
-              >
+            <nav className="hidden md:flex space-x-6 items-center font-medium text-[15px]">
+              <a href="/home" className="nav-link-active">
                 หน้าหลัก
               </a>
-              <a
-                href="/eventSchedule"
-                className="text-gray-500 hover:text-gray-900 transition"
-              >
+              <a href="/eventSchedule" className="nav-link">
                 กิจกรรมทั้งหมด
               </a>
-
-              <button
-                onClick={() => router.push("/groupChat")}
-                className="text-gray-500 hover:text-gray-900 transition"
-                title="ไปยังแชทของฉัน"
-              >
+              <button onClick={() => router.push("/groupChat")} className="nav-link">
                 แชทของฉัน
               </button>
             </nav>
           </div>
 
-          {/* --- Actions --- */}
           <div className="flex items-center space-x-4">
             <button
               onClick={() => router.push("/createActivity")}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105"
+              className="px-4 py-2 rounded-lg text-white font-medium bg-gradient-to-r from-[#E35205] to-[#FF944D] hover:shadow-lg transform hover:scale-105 transition-all"
             >
-              <Plus className="w-5 h-5" />
-              <span className="font-medium">สร้างกิจกรรม</span>
+              <div className="flex items-center space-x-2">
+                <Plus className="w-5 h-5" />
+                <span>สร้างกิจกรรม</span>
+              </div>
             </button>
 
             <div className="flex items-center space-x-3 pl-4 border-l border-gray-300">
-              {/* โปรไฟล์ */}
               <div
                 onClick={() => router.push("/profile")}
                 className="flex items-center gap-3 cursor-pointer"
-                title="ไปยังโปรไฟล์"
               >
-                <div className="text-right hidden sm:block">
-                  <div className="text-sm font-medium text-gray-900">
+                <div className="text-right hidden sm:block leading-tight">
+                  <div className="text-sm font-semibold text-gray-900">
                     {user && typeof user === "object"
                       ? user.name || user.preferred_username || user.email
                       : "ผู้เยี่ยมชม"}
@@ -173,40 +146,63 @@ export default function Header({
                   </div>
                 </div>
 
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#E35205] to-[#FF944D] flex items-center justify-center text-white font-semibold shadow-md">
                   {profileImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profileImage}
-                      alt="avatar"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={profileImage} alt="avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="text-white font-semibold bg-gradient-to-r from-blue-600 to-purple-600 w-full h-full flex items-center justify-center">
-                      {(user?.name || user?.email || "U")
-                        .toString()
-                        .charAt(0)
-                        .toUpperCase()}
-                    </div>
+                    (user?.name || user?.email || "U").toString().charAt(0).toUpperCase()
                   )}
                 </div>
               </div>
 
-              {/* Logout */}
-              <div className="relative">
-                <button
-                  onMouseEnter={() => setHover(true)}
-                  onMouseLeave={() => setHover(false)}
-                  onClick={handleLogout}
-                  className="ml-2 px-3 py-2 rounded-md text-red-600 border border-transparent hover:bg-red-50 transition"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onMouseEnter={() => setHover(true)}
+                onMouseLeave={() => setHover(false)}
+                onClick={handleLogout}
+                className={`ml-2 px-3 py-2 rounded-md transition-all ${
+                  hover
+                    ? "bg-red-50 text-red-600 scale-105 shadow-inner"
+                    : "text-red-500 hover:bg-red-50"
+                }`}
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap');
+        html, body {
+          font-family: 'IBM Plex Sans Thai Looped', sans-serif;
+        }
+        .header-blur {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          animation: fadeInDown 0.6s ease;
+        }
+        .nav-link {
+          color: #555;
+          transition: color 0.25s ease;
+        }
+        .nav-link:hover {
+          color: #E35205;
+        }
+        .nav-link-active {
+          color: #E35205;
+          font-weight: 600;
+        }
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </header>
   );
 }
